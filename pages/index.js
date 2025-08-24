@@ -1,5 +1,6 @@
 // pages/index.js
 import { useState } from "react";
+import Head from "next/head";
 import Button from "../components/Button";
 import AuthModal from "../components/AuthModal";
 import ChatModal from "../components/ChatModal";
@@ -17,6 +18,23 @@ export default function Home() {
 
   return (
     <div className="flex flex-col items-center w-full text-center relative">
+      <Head>
+        <title>Fachs College LMS – Your Learning Hub</title>
+        <meta
+          name="description"
+          content="Explore Fachs College LMS: Access accredited qualifications, manage your modules, and experience AI-powered learning."
+        />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <link rel="icon" href="/collegelogo.png" />
+        <link rel="apple-touch-icon" href="/collegelogo.png" />
+        <meta property="og:title" content="Fachs College LMS" />
+        <meta
+          property="og:description"
+          content="AI-enhanced learning, accredited qualifications, and a seamless student experience."
+        />
+        <meta property="og:image" content="/collegelogo.png" />
+        <meta property="og:type" content="website" />
+      </Head>
       {/* Fachs Logo */}
       <div className="mb-2">
         <img
