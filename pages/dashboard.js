@@ -140,12 +140,20 @@ export default function Dashboard() {
                       Payment: {enrollment.payment_status}
                     </p>
 
-                    <Link
-                      href={`/module-player/${enrollment.id}`} 
-                      className="mt-3 inline-block text-blue-400 font-bold hover:underline"
-                    >
-                      Go to programme →
-                    </Link>
+                 <Link
+  href={`/popia.js`} 
+  className="mt-3 block text-red-500 font-bold hover:underline"
+>
+  POPIA Declaration
+</Link>
+
+<Link
+  href={`/module-player/${enrollment.id}`} 
+  className="mt-3 block text-blue-400 font-bold hover:underline"
+>
+  Go to programme →
+</Link>
+
                   </li>
                 );
               })}
