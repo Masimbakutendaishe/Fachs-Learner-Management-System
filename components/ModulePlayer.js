@@ -328,6 +328,12 @@ const LearnerGuide = ({ title, url, chapters, onComplete }) => {
   );
 };
 
+
+
+// --- Existing Components remain unchanged ---
+// UnitWeekIntro, ResourceCard, TeamsSession, PracticalEvidenceUpload, LearningResource, LearnerGuide
+// ...
+
 /* ---------- ModulePlayer ---------- */
 export default function ModulePlayer() {
   const [unitWeek, setUnitWeek] = useState(null);
@@ -361,7 +367,7 @@ export default function ModulePlayer() {
         if (!programmeIds.length) { setLoading(false); return; }
 
         const { data: unitWeeksData } = await supabase
-          .from("unit_weeks2") // Updated table
+          .from("unit_weeks2")
           .select("*")
           .in("programme_id", programmeIds)
           .order("week_start_date", { ascending: true });
@@ -407,10 +413,11 @@ export default function ModulePlayer() {
     { key: "mr", label: "Attendance Register", url: unitWeek.sor_pdf_url },
   ];
 
+  /* ---------- Render Layout ---------- */
   return (
-    <div className="flex h-screen bg-gray-50">
-      {/* Sidebar */}
-      <aside className="w-72 bg-gray-800 text-white border-r p-4">
+    <div className="flex flex-col md:flex-row h-screen bg-gray-50">
+      {/* Sidebar for large screens */}
+      <aside className="hidden md:flex w-72 bg-gray-800 text-white border-r p-4 flex-col">
         <h2 className="text-xl font-bold mb-4">This Week’s Learning</h2>
         <h2 className="text-xs font-bold mb-2">{unitWeek.unit_standard_title}</h2>
         <ul>
@@ -432,8 +439,25 @@ export default function ModulePlayer() {
         </ul>
       </aside>
 
-      {/* Main */}
-      <main className="flex-1 p-8 overflow-y-auto h-full bg-gray-50">
+      {/* Mobile Dropdown / Tabs */}
+      <div className="md:hidden p-4 bg-gray-800 text-white flex flex-col">
+        <label className="mb-2 font-semibold">Select Activity:</label>
+        <select
+          className="p-2 rounded text-gray-900"
+          value={currentActivity || ""}
+          onChange={(e) => setCurrentActivity(e.target.value)}
+        >
+          <option value="">-- Select --</option>
+          {activities.map((a) => (
+            <option key={a.key} value={a.key}>
+              {a.label}{completed[a.key] ? " ✔" : ""}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* Main Content */}
+      <main className="flex-1 p-4 md:p-8 overflow-y-auto h-full bg-gray-50">
         <UnitWeekIntro unitWeek={unitWeek} />
 
         {/* Activities */}
