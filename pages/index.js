@@ -37,11 +37,7 @@ export default function Home() {
       </Head>
       {/* Fachs Logo */}
       <div className="mb-2">
-        <img
-          src="/collegelogo.png"
-          alt="Fachs College Logo"
-          className="w-20 -mt-10 md:-mt-20 mx-auto"
-        />
+       
       </div>
 
       <h1 className="text-5xl font-bold mb-4 drop-shadow-lg">
