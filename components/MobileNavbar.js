@@ -33,6 +33,14 @@ export default function MobileNavbar() {
   ];
 
   return (
+    <>
+      <div className="mt-6 absolute top-2 left-1/2 transform -translate-x-1/2 z-40">
+        <img
+          src="/collegelogo.png"
+          alt="Fachs College Logo"
+          className="w-20 md:w-24"
+        />
+      </div>
     <nav className="flex justify-between items-center text-white relative">
       {/* Logo & User Info */}
       <div className="hidden md:flex items-center space-x-4 font-bold text-xl">
@@ -197,5 +205,6 @@ export default function MobileNavbar() {
         onClose={() => setAuthModalOpen(false)}
       />
     </nav>
+    </>
   );
 }
