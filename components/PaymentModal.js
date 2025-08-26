@@ -1,7 +1,8 @@
 "use client";
 import { useState, useEffect } from "react";
-import { supabase } from "../lib/supabase"; // default export
-import { getCurrentUserId } from "./AuthModal"; // import the helper
+import { supabase } from "../lib/supabase";
+import { getCurrentUserId } from "./AuthModal";
+import { useRouter } from "next/navigation"; // import router
 
 export default function PaymentModal({ isOpen, onClose, programme }) {
   const [method, setMethod] = useState("paypal");
@@ -11,6 +12,7 @@ export default function PaymentModal({ isOpen, onClose, programme }) {
   const [otp, setOtp] = useState("");
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const router = useRouter(); // initialize router
 
   useEffect(() => {
     document.body.style.overflow = isOpen ? "hidden" : "auto";
@@ -23,40 +25,44 @@ export default function PaymentModal({ isOpen, onClose, programme }) {
     setStep(2);
   };
 
- const handleConfirm = async () => {
-  setLoading(true);
-  const userId = getCurrentUserId();
-  console.log("🔑 [Step 2] User ID at Confirm OTP stage:", userId);
+  const handleConfirm = async () => {
+    setLoading(true);
+    const userId = getCurrentUserId();
+    console.log("🔑 [Step 2] User ID at Confirm OTP stage:", userId);
 
-  if (!userId) {
-    alert("User not logged in. Please sign in first.");
-    setLoading(false);
-    return;
-  }
-
-  try {
-    const { data, error } = await supabase
-      .from("enrollments")
-      .update({ payment_status: "paid" })
-      .eq("user_id", userId)
-      .eq("programme_id", programme.id)
-      .eq("payment_status", "failed"); // only update failed payments
-
-    if (error) {
-      alert("Payment failed: " + error.message);
-    } else {
-      console.log("💾 Supabase update response:", data);
-      console.log("✅ Payment success for user ID:", userId);
-      setStep(3); // immediately show success
+    if (!userId) {
+      alert("User not logged in. Please sign in first.");
+      setLoading(false);
+      return;
     }
-  } catch (err) {
-    console.error("❌ Payment error for user ID:", userId, err);
-    alert("Payment failed: " + err.message);
-  } finally {
-    setLoading(false);
-  }
-};
 
+    try {
+      const { data, error } = await supabase
+        .from("enrollments")
+        .update({ payment_status: "paid" })
+        .eq("user_id", userId)
+        .eq("programme_id", programme.id)
+        .eq("payment_status", "failed"); // only update failed payments
+
+      if (error) {
+        alert("Payment failed: " + error.message);
+      } else {
+        console.log("💾 Supabase update response:", data);
+        console.log("✅ Payment success for user ID:", userId);
+        setStep(3); // immediately show success
+      }
+    } catch (err) {
+      console.error("❌ Payment error for user ID:", userId, err);
+      alert("Payment failed: " + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSuccessClose = () => {
+    onClose(); // close the modal
+    router.push("/dashboard"); // redirect to dashboard
+  };
 
   if (!isOpen) return null;
 
@@ -155,7 +161,7 @@ export default function PaymentModal({ isOpen, onClose, programme }) {
             </h3>
             <p className="text-center text-gray-800">You are now enrolled in {programme.title}.</p>
             <button
-              onClick={onClose}
+              onClick={handleSuccessClose}
               className="mt-6 w-full py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition font-semibold"
             >
               Close
