@@ -2,17 +2,16 @@
 import { useState } from "react";
 import { supabase } from "../../../lib/supabase";
 
-
 /* ---------- Helper Components ---------- */
 const UnitWeekIntro = ({ unitWeek, onCheckSubmissions, onCheckPreviousUploads, onDateChange }) => (
   <div className="p-6 bg-gray-900/80 shadow-lg rounded-lg mb-6 text-white">
-    <div className="flex justify-between items-center">
+    <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
       <div>
         <h1 className="text-3xl font-bold text-red-200">
           {unitWeek?.unit_standard_title || "No Unit Title"}
         </h1>
 
-        <div className="flex gap-4 mt-2 items-center">
+        <div className="flex flex-col md:flex-row gap-4 mt-2 items-start md:items-center">
           <label className="text-gray-200 text-sm">
             Start:
             <input
@@ -38,7 +37,7 @@ const UnitWeekIntro = ({ unitWeek, onCheckSubmissions, onCheckPreviousUploads, o
         </p>
       </div>
 
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2 mt-4 md:mt-0">
         <button
           onClick={onCheckSubmissions}
           className="px-4 py-2 bg-blue-700 text-white rounded hover:bg-blue-800"
@@ -90,7 +89,6 @@ const ResourceCard = ({ unitWeekId, label, url, value, onChange, instructions, a
 
   const handleSave = () => {
     if (file) {
-      // In practice, upload to Supabase Storage here, then save URL to table
       saveUnitWeekField(unitWeekId, field, file.name);
     } else {
       saveUnitWeekField(unitWeekId, field, value);
@@ -161,7 +159,7 @@ const UploadMenu = ({ unitWeekId, label, field }) => {
       <h2 className="text-xl font-bold mb-4">{label}</h2>
 
       {!mode && (
-        <div className="flex gap-4">
+        <div className="flex flex-col md:flex-row gap-4">
           <button onClick={() => setMode("upload")} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
             Upload File
           </button>
@@ -175,7 +173,7 @@ const UploadMenu = ({ unitWeekId, label, field }) => {
         <div className="mt-4">
           <input type="file" onChange={(e) => setFile(e.target.files[0])} className="mb-2" />
           {file && <p className="text-green-700 text-gray-900">Selected: {file.name}</p>}
-          <div className="flex gap-2 mt-2">
+          <div className="flex gap-2 mt-2 flex-wrap">
             <button onClick={handleSaveFile} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Submit</button>
             <button onClick={() => setMode(null)} className="px-4 py-2 bg-gray-400 text-white rounded hover:bg-gray-500">Back</button>
           </div>
@@ -223,6 +221,10 @@ const UploadMenu = ({ unitWeekId, label, field }) => {
     </div>
   );
 };
+
+/* ---------- Attendance, Reports, etc. (same as before) ---------- */
+// AttendanceMenu, MonthlyReportMenu, InvoiceMenu, SendToAssessorMenu, ScheduleTeamsMenu
+// Keep all existing code as-is here
 
 /* ---------- Facilitator Menus (Attendance / Reports / Teams) ---------- */
 const AttendanceMenu = ({ unitWeekId }) => (
@@ -325,6 +327,7 @@ const ScheduleTeamsMenu = ({ unitWeekId }) => {
   );
 };
 
+
 /* ---------- Facilitator Module Player ---------- */
 export default function FacilitatorModulePlayerPage() {
   const [unitWeek, setUnitWeek] = useState({
@@ -351,7 +354,7 @@ export default function FacilitatorModulePlayerPage() {
     { key: "practical", label: "Practical Evidence Upload" },
     { key: "attendance", label: "Mark Attendance" },
     { key: "schedule_teams", label: "Schedule MS Teams Session" },
-      { key: "report", label: "Generate Monthly Report" },
+    { key: "report", label: "Generate Monthly Report" },
     { key: "invoice", label: "Generate Monthly Invoice" },
     { key: "send_to_assessor", label: "Send to Assessor" },
   ];
@@ -362,8 +365,9 @@ export default function FacilitatorModulePlayerPage() {
   };
 
   return (
-    <div className="flex h-screen bg-gray-50">
-      <aside className="w-72 bg-gray-800 text-white border-r p-4 overflow-y-auto">
+    <div className="flex flex-col md:flex-row h-screen bg-gray-50">
+      {/* Desktop Sidebar */}
+      <aside className="hidden md:block w-72 bg-gray-800 text-white border-r p-4 overflow-y-auto">
         <h2 className="text-xl font-bold mb-4">Facilitator Controls</h2>
         <ul className="space-y-2">
           {activities.map((a) => (
@@ -381,7 +385,21 @@ export default function FacilitatorModulePlayerPage() {
         </ul>
       </aside>
 
-      <main className="flex-1 p-8 overflow-y-auto h-full">
+      {/* Mobile Dropdown */}
+      <div className="md:hidden bg-gray-800 text-white p-4">
+        <select
+          className="w-full p-2 rounded bg-gray-700 text-white"
+          value={currentActivity || ""}
+          onChange={(e) => setCurrentActivity(e.target.value)}
+        >
+          <option value="">Select Activity</option>
+          {activities.map((a) => (
+            <option key={a.key} value={a.key}>{a.label}</option>
+          ))}
+        </select>
+      </div>
+
+      <main className="flex-1 p-4 md:p-8 overflow-y-auto h-full">
         <UnitWeekIntro
           unitWeek={{ ...unitWeek, unit_standard_title: unitTitleText }}
           onCheckSubmissions={() => alert("Check Student Submissions (dummy)!")}
