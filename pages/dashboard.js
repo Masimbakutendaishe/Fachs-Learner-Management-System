@@ -141,7 +141,7 @@ export default function Dashboard() {
                     </p>
 
                  <Link
-  href={`/popia.js`} 
+  href={`/popia`} 
   className="mt-3 block text-red-500 font-bold hover:underline"
 >
   POPIA Declaration
