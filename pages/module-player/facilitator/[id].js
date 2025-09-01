@@ -38,24 +38,27 @@ const UnitWeekIntro = ({ unitWeek, onCheckSubmissions, onCheckPreviousUploads, o
       </div>
 
       <div className="flex flex-col gap-2 mt-4 md:mt-0">
-        <button
-          onClick={onCheckSubmissions}
-          className="px-4 py-2 bg-blue-700 text-white rounded hover:bg-blue-800"
-        >
-          Check Learner Submissions
-        </button>
-        <button
-          onClick={onCheckPreviousUploads}
-          className="px-4 py-2 bg-blue-700 text-white rounded hover:bg-blue-800"
-        >
-          Check Previous Uploads
-        </button>
-        <button
-          onClick={onCheckPreviousUploads}
-          className="px-4 py-2 bg-blue-700 text-white rounded hover:bg-blue-800"
-        >
-          Schedule MS Teams Session
-        </button>
+       <a
+  href="/gradesubmissions"
+  className="inline-block px-4 py-2 bg-blue-700 text-white rounded hover:bg-blue-800 text-center"
+>
+  Grade Learner Submissions
+</a>
+
+<a
+  href="/previousuploads"
+  className="inline-block px-4 py-2 bg-blue-700 text-white rounded hover:bg-blue-800 text-center"
+>
+  Check Previous Uploads
+</a>
+
+<a
+  href="/scheduleteams"
+  className="inline-block px-4 py-2 bg-blue-700 text-white rounded hover:bg-blue-800 text-center"
+>
+  Schedule MS Teams Session
+</a>
+
       </div>
     </div>
   </div>
@@ -357,6 +360,7 @@ export default function FacilitatorModulePlayerPage() {
     { key: "report", label: "Generate Monthly Report" },
     { key: "invoice", label: "Generate Monthly Invoice" },
     { key: "send_to_assessor", label: "Send to Assessor" },
+    { key: "send_to_assessor", label: "Generate Certificates" },
   ];
 
   const handleDateChange = (field, value) => {
