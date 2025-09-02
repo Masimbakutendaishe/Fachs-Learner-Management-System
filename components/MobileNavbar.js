@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Menu, X, User, LayoutDashboard, LogOut } from "lucide-react";
+import { Menu, X, User, LayoutDashboard, LogOut, Bell } from "lucide-react";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import FacilitatorLoginModal from "./FacilitatorLoginModal"; 
 import AuthModal from "./AuthModal"; 
@@ -33,7 +33,6 @@ export default function MobileNavbar() {
   ];
 
   return (
- 
     <nav className="flex justify-between items-center text-white relative">
       {/* Logo & User Info */}
       <div className="hidden md:flex items-center space-x-4 font-bold text-xl">
@@ -43,6 +42,11 @@ export default function MobileNavbar() {
         <Link href="/dashboard" className="hover:text-yellow-400">
           <LayoutDashboard size={24} />
         </Link>
+
+        {/* Bell icon */}
+        <button className="hover:text-yellow-400">
+          <Bell size={24} />
+        </button>
 
         {/* User Dropdown */}
         {user ? (
@@ -74,13 +78,18 @@ export default function MobileNavbar() {
             </div>
           </div>
         ) : (
-          <button
-            onClick={() => setAuthModalOpen(true)}
-            className="hover:text-yellow-400 flex items-center space-x-1"
-          >
-            <User size={24} />
-            <span className="text-sm">Login</span>
-          </button>
+          <div className="relative group">
+            <button
+              onClick={() => setAuthModalOpen(true)}
+              className="hover:text-yellow-400 flex items-center"
+            >
+              <User size={24} />
+            </button>
+            {/* Login label only on hover */}
+            <div className="absolute right-0 mt-2 px-3 py-1 bg-white text-black text-sm rounded-md shadow-lg opacity-0 group-hover:opacity-100 invisible group-hover:visible transition-opacity duration-200">
+              Login
+            </div>
+          </div>
         )}
       </div>
 
@@ -198,6 +207,5 @@ export default function MobileNavbar() {
         onClose={() => setAuthModalOpen(false)}
       />
     </nav>
-   
   );
 }
