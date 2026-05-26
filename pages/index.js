@@ -1,4 +1,9 @@
+<<<<<<< HEAD
 import { useState, useEffect } from "react";
+=======
+// pages/index.js
+import { useState } from "react";
+>>>>>>> 421e4ada339fa417b8f051cfa442859455658a42
 import Head from "next/head";
 import Button from "../components/Button";
 import AuthModal from "../components/AuthModal";
@@ -52,10 +57,13 @@ export default function Home() {
         <meta property="og:image" content="/collegelogo.png" />
         <meta property="og:type" content="website" />
       </Head>
+<<<<<<< HEAD
 
+=======
+>>>>>>> 421e4ada339fa417b8f051cfa442859455658a42
       {/* Fachs Logo */}
       <div className="mb-2">
-        <img
+         <img
           src="/collegelogo.png"
           alt="Fachs College Logo"
           className="w-20 -mt-10 md:-mt-20 mx-auto"
