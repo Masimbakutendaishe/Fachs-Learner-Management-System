@@ -3,14 +3,15 @@ import { useState, useEffect } from "react";
 import { X } from "lucide-react";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { useRouter } from "next/router";
+import { useUser } from "../pages/context/UserContext"; // 🔹 NEW
 
-// Module-level exported userId
 let exportedUserId = null;
 export const getCurrentUserId = () => exportedUserId;
 
 export default function AuthModal({ isOpen, onClose, onSelectQualification, mode: initialMode }) {
   const supabase = createClientComponentClient();
   const router = useRouter();
+  const { setUser } = useUser(); // 🔹 NEW
 
   const [mode, setMode] = useState(initialMode || "signup");
   const [email, setEmail] = useState("");
@@ -20,6 +21,9 @@ export default function AuthModal({ isOpen, onClose, onSelectQualification, mode
   const [dob, setDob] = useState("");
   const [qualification, setQualification] = useState("");
   const [qualifications, setQualifications] = useState([]);
+  const [profilePicFile, setProfilePicFile] = useState(null); // 🔹 NEW
+  const [profilePicUrl, setProfilePicUrl] = useState(""); // 🔹 NEW
+  const [uploadingPic, setUploadingPic] = useState(false); // 🔹 NEW
 
   useEffect(() => {
     if (initialMode) setMode(initialMode);
@@ -36,6 +40,56 @@ export default function AuthModal({ isOpen, onClose, onSelectQualification, mode
     };
     fetchQualifications();
   }, [supabase]);
+
+  const handleProfilePicUpload = async (userId) => {
+    if (!profilePicFile) return null;
+
+    setUploadingPic(true);
+    console.log("⏳ Starting profile picture upload...");
+
+    try {
+      const fileExt = profilePicFile.name.split(".").pop();
+      const fileName = `${userId}.${fileExt}`;
+      const filePath = `profile_pics/${fileName}`;
+
+      console.log("Uploading to path:", filePath, "File object:", profilePicFile);
+
+      const { data, error: uploadError } = await supabase.storage
+        .from("profile_pics")
+        .upload(filePath, profilePicFile, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      console.log("Upload data:", data);
+
+      const { data: publicUrlData, error: urlError } = supabase.storage
+        .from("profile_pics")
+        .getPublicUrl(filePath);
+
+      if (urlError) throw urlError;
+
+      console.log("Public URL data:", publicUrlData);
+
+      setProfilePicUrl(publicUrlData.publicUrl);
+
+      // Update profiles table with pic URL
+      const { error: profileUpdateError } = await supabase
+        .from("profiles")
+        .update({ profile_pic: publicUrlData.publicUrl })
+        .eq("id", userId);
+
+      if (profileUpdateError) throw profileUpdateError;
+
+      console.log("✅ Profile picture uploaded and profile updated successfully");
+      return publicUrlData.publicUrl;
+    } catch (err) {
+      console.error("❌ Profile picture upload failed:", err);
+      alert("Profile picture upload failed. You can continue without it.");
+      return null;
+    } finally {
+      setUploadingPic(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -63,6 +117,9 @@ export default function AuthModal({ isOpen, onClose, onSelectQualification, mode
       }]);
       if (profileError) return alert(profileError.message);
 
+      // 🔹 NEW: Upload profile picture if provided
+      if (profilePicFile) await handleProfilePicUpload(userId);
+
       // Insert enrollment
       const selectedProgramme = qualifications.find(q => q.id === Number(qualification));
       if (!selectedProgramme) return alert("Please select a valid programme.");
@@ -80,6 +137,7 @@ export default function AuthModal({ isOpen, onClose, onSelectQualification, mode
       onSelectQualification?.(userId);
       setMode("signin");
       setEmail(""); setPassword("");
+      setProfilePicFile(null); // reset pic
     } else {
       // ✅ Sign in
       const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
@@ -90,7 +148,7 @@ export default function AuthModal({ isOpen, onClose, onSelectQualification, mode
 
       const userId = signInData.user.id;
 
-      // 🔎 Check if user is a learner in profiles table
+      // 🔎 Check if user is a learner
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .select("role")
@@ -103,15 +161,18 @@ export default function AuthModal({ isOpen, onClose, onSelectQualification, mode
       }
 
       if (!profile || profile.role !== "learner") {
-        // ❌ Block non-learners
         await supabase.auth.signOut();
         return alert("Access denied. Only learners can sign in.");
       }
 
-      // ✅ Proceed for learners only
+      // ✅ Success
       exportedUserId = userId;
       console.log("✅ Learner sign-in successful. User ID:", userId);
       onSelectQualification?.(userId);
+
+      // 🔹 NEW — instantly update UserContext and broadcast login
+      setUser(signInData.user);
+      window.dispatchEvent(new Event("user-logged-in"));
 
       // Check enrollment/payment
       const { data: enrollments } = await supabase
@@ -127,6 +188,7 @@ export default function AuthModal({ isOpen, onClose, onSelectQualification, mode
         onClose();
       } else {
         router.push("/dashboard");
+        onClose(); // 🔹 NEW — close modal after successful login
       }
     }
   };
@@ -144,6 +206,10 @@ export default function AuthModal({ isOpen, onClose, onSelectQualification, mode
           {mode === "signup" ? "Create an Account" : "Sign In"}
         </h2>
 
+        {uploadingPic && (
+          <p className="text-center text-yellow-300 mb-4 animate-pulse font-semibold">Uploading profile picture, please wait...</p>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-4">
           {mode === "signup" && (
             <>
@@ -156,6 +222,14 @@ export default function AuthModal({ isOpen, onClose, onSelectQualification, mode
                   <option key={q.id} value={q.id}>{q.name} (NQF {q.nqf_level})</option>
                 ))}
               </select>
+
+              {/* 🔹 NEW: Profile Picture Upload */}
+              <input
+                type="file"
+                accept="image/*"
+                onChange={e => setProfilePicFile(e.target.files[0])}
+                className="w-full text-white"
+              />
             </>
           )}
 

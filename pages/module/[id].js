@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
-import supabase from "../../lib/supabase";
+import {supabase} from "../../lib/supabase";
 import AIHelpPanel from "../../components/AIHelpPanel";
 import TeamsJoinButton from "../../components/TeamsJoinButton";
 

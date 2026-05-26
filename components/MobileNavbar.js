@@ -1,14 +1,126 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { Menu, X } from "lucide-react";
-import FacilitatorLoginModal from "./FacilitatorLoginModal"; // ⬅️ import modal
-import AuthModal from "./AuthModal"; // ⬅️ import modal
+import { Menu, X, User, LayoutDashboard, LogOut, Bell } from "lucide-react";
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import FacilitatorLoginModal from "./FacilitatorLoginModal";
+import AuthModal from "./AuthModal";
 
 export default function MobileNavbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [isFacilitatorModalOpen, setIsFacilitatorModalOpen] = useState(false);
   const [isAuthModalOpen, setAuthModalOpen] = useState(false);
+  const [user, setUser] = useState(null);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [profilePic, setProfilePic] = useState(null);
+
+  const supabase = createClientComponentClient();
+  const inactivityTimer = useRef(null);
+  const dropdownTimeout = useRef(null);
+  const isLoggingOut = useRef(false);
+
+  useEffect(() => {
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user || null);
+    });
+    supabase.auth.getUser().then(({ data: { user } }) => setUser(user));
+    return () => listener.subscription.unsubscribe();
+  }, [supabase]);
+
+  // ✅ Auto logout ONLY when user exists
+  useEffect(() => {
+    if (!user) return;
+
+    const resetTimer = () => {
+      if (inactivityTimer.current) clearTimeout(inactivityTimer.current);
+      inactivityTimer.current = setTimeout(() => handleLogout(), 5 * 60 * 1000);
+    };
+
+    window.addEventListener("mousemove", resetTimer);
+    window.addEventListener("keydown", resetTimer);
+    resetTimer();
+
+    return () => {
+      window.removeEventListener("mousemove", resetTimer);
+      window.removeEventListener("keydown", resetTimer);
+      if (inactivityTimer.current) clearTimeout(inactivityTimer.current);
+    };
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) {
+      setProfilePic(null);
+      return;
+    }
+  
+    const fetchProfilePic = async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("profile_pic")
+        .eq("id", user.id)
+        .single();
+  
+      if (!error && data?.profile_pic) {
+        setProfilePic(data.profile_pic);
+      } else {
+        setProfilePic(null);
+      }
+    };
+  
+    fetchProfilePic();
+  }, [user, supabase]);
+  
+
+  const handleLogout = async () => {
+    if (!user || isLoggingOut.current) return;
+
+    isLoggingOut.current = true;
+    if (inactivityTimer.current) clearTimeout(inactivityTimer.current);
+
+    await supabase.auth.signOut();
+    setUser(null);
+    alert("You’ve been logged out.");
+    window.location.href = "/";
+  };
+
+  const handleLoginClick = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      alert("You are already logged in. Please logout first.");
+      return;
+    }
+    setAuthModalOpen(true);
+    setIsOpen(false);
+  };
+
+  const handleFacilitatorClick = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      alert("You are already logged in. Logout first to switch roles.");
+      return;
+    }
+    setIsFacilitatorModalOpen(true);
+    setIsOpen(false);
+  };
+
+  // Dropdown handlers
+  const handleMouseEnter = () => {
+    if (dropdownTimeout.current) clearTimeout(dropdownTimeout.current);
+    setShowDropdown(true);
+  };
+
+  const handleMouseLeave = () => {
+    dropdownTimeout.current = setTimeout(() => setShowDropdown(false), 2000);
+  };
+
+  const handleClickOutside = (e) => {
+    if (!e.target.closest("#user-dropdown")) setShowDropdown(false);
+  };
+
+  useEffect(() => {
+    window.addEventListener("click", handleClickOutside);
+    return () => window.removeEventListener("click", handleClickOutside);
+  }, []);
 
   const menuItems = [
     { name: "Home", href: "/" },
@@ -17,79 +129,73 @@ export default function MobileNavbar() {
 
   return (
     <nav className="flex justify-between items-center text-white relative">
-      {/* Logo */}
-      <div className="hidden md:block font-bold text-xl text-left">
-        Fachs College LMS
+      <div className="hidden md:flex items-center space-x-4 font-bold text-xl">
+        <span>Fachs College LMS</span>
+        {user && (
+          <div className="flex items-center space-x-3 ml-4">
+            <Link href="/dashboard"><LayoutDashboard size={24} /></Link>
+            <Bell size={24} />
+          </div>
+        )}
       </div>
 
-      {/* Desktop menu */}
-      <div className="hidden md:flex space-x-6">
-        {menuItems.map((item, index) => (
-          <Link
-            key={index}
-            href={item.href}
-            className="relative px-3 py-1 rounded-full hover:bg-white hover:text-black transition-colors duration-300"
-          >
+      <div className="hidden md:flex items-center space-x-6">
+        {menuItems.map((item) => (
+          <Link key={item.name} href={item.href} className="hover:text-yellow-400">
             {item.name}
           </Link>
         ))}
 
-        {/* Facilitator modal trigger */}
-        <button
-          onClick={() => setIsFacilitatorModalOpen(true)}
-          className="relative px-3 py-1 rounded-full bg-yellow-500 hover:bg-yellow-600 text-black transition-colors duration-300"
-        >
-          Not a Learner?
-        </button>
+        {!user ? (
+          <>
+            <button onClick={handleLoginClick} className="px-3 py-1 rounded-full bg-white text-red-800 font-bold">
+              Sign In
+            </button>
+            <button onClick={handleFacilitatorClick} className="px-3 py-1 rounded-full bg-yellow-500 text-black">
+              Not a Learner?
+            </button>
+          </>
+        ) : (
+          <div
+            id="user-dropdown"
+            className="relative"
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
+          >
+            <button className="flex items-center space-x-2">
+            {profilePic ? (
+  <img
+    src={profilePic}
+    className="w-8 h-8 rounded-full object-cover"
+  />
+) : user.user_metadata?.avatar_url ? (
+  <img
+    src={user.user_metadata.avatar_url}
+    className="w-8 h-8 rounded-full object-cover"
+  />
+) : (
+  <User size={24} />
+)}
+
+              <span>{user.user_metadata?.full_name || user.email}</span>
+            </button>
+            <div className={`absolute right-0 mt-2 w-56 bg-white text-black rounded-lg shadow-lg
+              ${showDropdown ? "opacity-100 visible" : "opacity-0 invisible"}`}>
+              <div className="px-4 py-2 border-b">{user.email}</div>
+              <button onClick={handleLogout} className="flex w-full px-4 py-2 hover:bg-gray-100">
+                <LogOut size={18} className="mr-2" /> Logout
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Mobile menu button */}
-      <button
-        className="md:hidden focus:outline-none"
-        onClick={() => setIsOpen(!isOpen)}
-      >
+      <button className="md:hidden" onClick={() => setIsOpen(!isOpen)}>
         {isOpen ? <X size={28} /> : <Menu size={28} />}
       </button>
 
-      {/* Mobile dropdown */}
-      <div
-        className={`absolute top-16 left-0 w-full md:hidden bg-gradient-to-br from-blue-800 to-red-800 p-6 flex flex-col space-y-4 shadow-xl rounded-b-2xl transform transition-all duration-300 ease-out
-        ${isOpen ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-10 pointer-events-none"}`}
-      >
-        {menuItems.map((item, index) => (
-          <Link
-            key={index}
-            href={item.href}
-            onClick={() => setIsOpen(false)}
-            className="text-white hover:underline"
-          >
-            {item.name}
-          </Link>
-        ))}
-
-        {/* Facilitator modal trigger (mobile) */}
-        <button
-          onClick={() => {
-            setIsFacilitatorModalOpen(true);
-            setIsOpen(false);
-          }}
-          className="text-yellow-300 hover:text-yellow-100"
-        >
-          Not a Learner?
-        </button>
-      </div>
-
-      {/* Facilitator Login Modal */}
-      <FacilitatorLoginModal
-  isOpen={isFacilitatorModalOpen}
-  onClose={() => setIsFacilitatorModalOpen(false)}
-  onSwitchToLearner={() => setAuthModalOpen(true)} // <-- opens learner modal
-/>
-<AuthModal
-  isOpen={isAuthModalOpen}
-  onClose={() => setAuthModalOpen(false)}
-/>
-
+      <FacilitatorLoginModal isOpen={isFacilitatorModalOpen} onClose={() => setIsFacilitatorModalOpen(false)} />
+      <AuthModal isOpen={isAuthModalOpen} onClose={() => setAuthModalOpen(false)} />
     </nav>
   );
 }
