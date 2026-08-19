@@ -95,46 +95,75 @@ export default function FacilitatorLoginModal({ isOpen, onClose, onSwitchToLearn
     }
   };
 
+  const inputClass =
+    "w-full px-4 py-3 rounded-xl border text-sm transition-colors focus:outline-none focus:ring-2";
+
   return (
     <>
       {isOpen && (
-        <div onClick={onClose} className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm z-30" />
+        <div onClick={onClose} className="fixed inset-0 bg-black/40 backdrop-blur-sm z-30" />
       )}
 
       <div
-        className={`fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2
-          w-full max-w-md md:max-w-lg
-          bg-gradient-to-br from-blue-900 via-gray-900 to-red-900
-          rounded-3xl shadow-2xl border border-white/10
-          z-40 p-8 transition-all duration-500
-          ${isOpen ? "scale-100 opacity-100" : "scale-95 opacity-0 pointer-events-none"}`}
+        className={`fixed inset-0 z-40 overflow-y-auto flex items-start md:items-center justify-center p-4 ${
+          isOpen ? "" : "pointer-events-none"
+        }`}
       >
-        <button onClick={onClose} className="absolute top-4 right-4 text-white hover:text-gray-200">
-          <X size={26} />
+        <div
+          className={`w-full max-w-md rounded-2xl shadow-2xl my-8 md:my-0 p-8 transition-all duration-300 ease-out ${
+            isOpen ? "scale-100 opacity-100" : "scale-95 opacity-0"
+          }`}
+          style={{ background: "var(--paper)" }}
+        >
+        <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 transition-colors">
+          <X size={22} />
         </button>
 
-        <h2 className="text-3xl font-bold mb-6 text-center text-white drop-shadow-lg">
-          {isSignUp ? "Facilitator Sign Up" : "Facilitator Sign In"}
+        <p className="text-xs font-mono text-[var(--text-muted)] mb-1 text-center">
+          INSTITUTIONS & STAFF
+        </p>
+        <h2 className="font-display text-2xl font-semibold mb-6 text-center" style={{ color: "var(--text)" }}>
+          {isSignUp ? "Set up your institution" : "Welcome back"}
         </h2>
 
-        <form onSubmit={handleAuth} className="space-y-4">
+        <form onSubmit={handleAuth} className="space-y-3">
           {isSignUp && (
             <>
-              <input type="text" placeholder="First Name" value={firstName} onChange={(e) => setFirstName(e.target.value)} required className="w-full px-4 py-3 rounded-xl bg-white/10 text-white placeholder-gray-300 border border-white/20 focus:ring-2 focus:ring-red-500 outline-none" />
-              <input type="text" placeholder="Surname" value={surname} onChange={(e) => setSurname(e.target.value)} required className="w-full px-4 py-3 rounded-xl bg-white/10 text-white placeholder-gray-300 border border-white/20 focus:ring-2 focus:ring-red-500 outline-none" />
+              <div className="grid grid-cols-2 gap-3">
+                <input
+                  type="text" placeholder="First Name" value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)} required
+                  className={inputClass} style={{ borderColor: "var(--border-soft)", color: "var(--text)" }}
+                />
+                <input
+                  type="text" placeholder="Surname" value={surname}
+                  onChange={(e) => setSurname(e.target.value)} required
+                  className={inputClass} style={{ borderColor: "var(--border-soft)", color: "var(--text)" }}
+                />
+              </div>
 
-              <div className="flex gap-2 text-sm">
+              <div className="flex gap-2 text-sm p-1 rounded-xl" style={{ background: "var(--paper-muted)" }}>
                 <button
                   type="button"
                   onClick={() => setOnboardingAction("create_institution")}
-                  className={`flex-1 py-2 rounded-lg border ${onboardingAction === "create_institution" ? "bg-white/20 border-white" : "border-white/20 text-gray-300"}`}
+                  className="flex-1 py-2 rounded-lg font-medium transition-colors"
+                  style={
+                    onboardingAction === "create_institution"
+                      ? { background: "var(--paper)", color: "var(--text)", boxShadow: "0 1px 2px rgba(16,24,40,0.06)" }
+                      : { color: "var(--text-muted)" }
+                  }
                 >
                   Start a new institution
                 </button>
                 <button
                   type="button"
                   onClick={() => setOnboardingAction("join_institution")}
-                  className={`flex-1 py-2 rounded-lg border ${onboardingAction === "join_institution" ? "bg-white/20 border-white" : "border-white/20 text-gray-300"}`}
+                  className="flex-1 py-2 rounded-lg font-medium transition-colors"
+                  style={
+                    onboardingAction === "join_institution"
+                      ? { background: "var(--paper)", color: "var(--text)", boxShadow: "0 1px 2px rgba(16,24,40,0.06)" }
+                      : { color: "var(--text-muted)" }
+                  }
                 >
                   Join with invite code
                 </button>
@@ -142,40 +171,74 @@ export default function FacilitatorLoginModal({ isOpen, onClose, onSwitchToLearn
 
               {onboardingAction === "create_institution" ? (
                 <>
-                  <input type="text" placeholder="Institution Name" value={institutionName} onChange={(e) => setInstitutionName(e.target.value)} required className="w-full px-4 py-3 rounded-xl bg-white/10 text-white placeholder-gray-300 border border-white/20 focus:ring-2 focus:ring-red-500 outline-none" />
-                  <select value={institutionType} onChange={(e) => setInstitutionType(e.target.value)} className="w-full px-4 py-3 rounded-xl bg-white/10 text-white border border-white/20 focus:ring-2 focus:ring-red-500 outline-none">
+                  <input
+                    type="text" placeholder="Institution Name" value={institutionName}
+                    onChange={(e) => setInstitutionName(e.target.value)} required
+                    className={inputClass} style={{ borderColor: "var(--border-soft)", color: "var(--text)" }}
+                  />
+                  <select
+                    value={institutionType} onChange={(e) => setInstitutionType(e.target.value)}
+                    className={inputClass} style={{ borderColor: "var(--border-soft)", color: "var(--text)" }}
+                  >
                     <option value="training_provider">Skills / Workplace Training Provider</option>
                     <option value="school">School (Primary / High School / College)</option>
                   </select>
                 </>
               ) : (
-                <input type="text" placeholder="Invite Code" value={inviteCode} onChange={(e) => setInviteCode(e.target.value)} required className="w-full px-4 py-3 rounded-xl bg-white/10 text-white placeholder-gray-300 border border-white/20 focus:ring-2 focus:ring-red-500 outline-none" />
+                <input
+                  type="text" placeholder="Invite Code" value={inviteCode}
+                  onChange={(e) => setInviteCode(e.target.value)} required
+                  className={`${inputClass} font-mono`} style={{ borderColor: "var(--border-soft)", color: "var(--text)" }}
+                />
               )}
             </>
           )}
 
-          <input type="email" placeholder="Email Address" value={email} onChange={(e) => setEmail(e.target.value)} required className="w-full px-4 py-3 rounded-xl bg-white/10 text-white placeholder-gray-300 border border-white/20 focus:ring-2 focus:ring-red-500 outline-none" />
-          <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required className="w-full px-4 py-3 rounded-xl bg-white/10 text-white placeholder-gray-300 border border-white/20 focus:ring-2 focus:ring-red-500 outline-none" />
+          <input
+            type="email" placeholder="Email Address" value={email} onChange={(e) => setEmail(e.target.value)} required
+            className={inputClass} style={{ borderColor: "var(--border-soft)", color: "var(--text)" }}
+          />
+          <input
+            type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required
+            className={inputClass} style={{ borderColor: "var(--border-soft)", color: "var(--text)" }}
+          />
 
-          <button type="submit" disabled={submitting} className="w-full py-3 mt-2 rounded-2xl bg-gradient-to-r from-red-600 to-blue-700 text-white font-semibold shadow-lg hover:shadow-2xl hover:scale-105 transform transition-all disabled:opacity-50 disabled:cursor-not-allowed">
-            {submitting ? "Please wait..." : isSignUp ? "Create Facilitator Account" : "Sign In"}
+          <button
+            type="submit" disabled={submitting}
+            className="w-full py-3 mt-2 rounded-xl text-white font-medium transition-all hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{ background: "var(--brand-color)" }}
+          >
+            {submitting ? "Please wait..." : isSignUp ? "Create Account" : "Sign In"}
           </button>
         </form>
 
-        <p className="mt-4 text-center text-white text-opacity-80">
+        <p className="mt-4 text-center text-sm text-[var(--text-muted)]">
           {isSignUp ? (
-            <>Already registered? <button onClick={() => setIsSignUp(false)} className="text-yellow-300 hover:underline">Sign In</button></>
+            <>Already registered?{" "}
+              <button onClick={() => setIsSignUp(false)} className="font-medium" style={{ color: "var(--brand-color)" }}>
+                Sign In
+              </button>
+            </>
           ) : (
-            <>New facilitator? <button onClick={() => setIsSignUp(true)} className="text-yellow-300 hover:underline">Sign Up</button></>
+            <>New institution or facilitator?{" "}
+              <button onClick={() => setIsSignUp(true)} className="font-medium" style={{ color: "var(--brand-color)" }}>
+                Sign Up
+              </button>
+            </>
           )}
         </p>
 
-        <p className="mt-3 text-center text-gray-300 text-sm">
+        <p className="mt-3 text-center text-sm text-[var(--text-muted)]">
           Are you a learner?{" "}
-          <button onClick={() => { onClose(); onSwitchToLearner?.(); }} className="text-blue-300 hover:underline">
+          <button
+            onClick={() => { onClose(); onSwitchToLearner?.(); }}
+            className="font-medium"
+            style={{ color: "var(--seal-gold)" }}
+          >
             Log in as Learner
           </button>
         </p>
+        </div>
       </div>
     </>
   );

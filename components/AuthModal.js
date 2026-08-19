@@ -163,54 +163,128 @@ export default function AuthModal({ isOpen, onClose, onSelectQualification, mode
     }
   };
 
+  const inputClass =
+    "w-full px-4 py-3 rounded-xl border text-sm transition-colors focus:outline-none focus:ring-2";
+
   return (
     <>
-      {isOpen && <div onClick={onClose} className="fixed inset-0 bg-black bg-opacity-40 backdrop-blur-sm z-30 transition-opacity" />}
+      {isOpen && (
+        <div
+          onClick={onClose}
+          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-30 transition-opacity"
+        />
+      )}
 
-      <div className={`fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-md md:max-w-lg bg-gradient-to-br from-navy-800 to-red-800 rounded-3xl shadow-2xl z-40 p-8 transition-all duration-700 ease-in-out scale-90 opacity-0 ${isOpen ? "scale-100 opacity-100" : "scale-90 opacity-0 pointer-events-none"}`}>
-        <button onClick={onClose} className="absolute top-4 right-4 text-white hover:text-gray-200">
-          <X size={28} />
+      <div
+        className={`fixed inset-0 z-40 overflow-y-auto flex items-start md:items-center justify-center p-4 ${
+          isOpen ? "" : "pointer-events-none"
+        }`}
+      >
+        <div
+          className={`w-full max-w-md rounded-2xl shadow-2xl my-8 md:my-0 p-8 transition-all duration-300 ease-out ${
+            isOpen ? "scale-100 opacity-100" : "scale-95 opacity-0"
+          }`}
+          style={{ background: "var(--paper)" }}
+        >
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 transition-colors"
+        >
+          <X size={22} />
         </button>
 
-        <h2 className="text-3xl font-bold mb-6 text-center text-white drop-shadow-lg">
-          {mode === "signup" ? "Create an Account" : "Sign In"}
+        <p className="text-xs font-mono text-[var(--text-muted)] mb-1 text-center">
+          {mode === "signup" ? "LEARNER SIGN UP" : "LEARNER SIGN IN"}
+        </p>
+        <h2 className="font-display text-2xl font-semibold mb-6 text-center" style={{ color: "var(--text)" }}>
+          {mode === "signup" ? "Create your account" : "Welcome back"}
         </h2>
 
         {uploadingPic && (
-          <p className="text-center text-yellow-300 mb-4 animate-pulse font-semibold">Uploading profile picture, please wait...</p>
+          <p className="text-center text-sm mb-4" style={{ color: "var(--seal-gold)" }}>
+            Uploading profile picture...
+          </p>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-3">
           {mode === "signup" && (
             <>
-              <input type="text" placeholder="First Name" value={firstName} onChange={(e) => setFirstName(e.target.value)} required className="w-full px-4 py-3 rounded-xl bg-white bg-opacity-20 text-white placeholder-white border border-white border-opacity-30 backdrop-blur-md" />
-              <input type="text" placeholder="Surname" value={surname} onChange={(e) => setSurname(e.target.value)} required className="w-full px-4 py-3 rounded-xl bg-white bg-opacity-20 text-white placeholder-white border border-white border-opacity-30 backdrop-blur-md" />
-              <input type="date" value={dob} onChange={(e) => setDob(e.target.value)} required className="w-full px-4 py-3 rounded-xl bg-white bg-opacity-20 text-white placeholder-white border border-white border-opacity-30 backdrop-blur-md" />
-              <select value={qualification} onChange={(e) => setQualification(e.target.value)} required className="w-full px-4 py-3 rounded-xl bg-white bg-opacity-20 text-white border border-white border-opacity-30 backdrop-blur-md">
+              <div className="grid grid-cols-2 gap-3">
+                <input
+                  type="text" placeholder="First Name" value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)} required
+                  className={inputClass}
+                  style={{ borderColor: "var(--border-soft)", color: "var(--text)" }}
+                />
+                <input
+                  type="text" placeholder="Surname" value={surname}
+                  onChange={(e) => setSurname(e.target.value)} required
+                  className={inputClass}
+                  style={{ borderColor: "var(--border-soft)", color: "var(--text)" }}
+                />
+              </div>
+              <input
+                type="date" value={dob} onChange={(e) => setDob(e.target.value)} required
+                className={inputClass}
+                style={{ borderColor: "var(--border-soft)", color: "var(--text)" }}
+              />
+              <select
+                value={qualification} onChange={(e) => setQualification(e.target.value)} required
+                className={inputClass}
+                style={{ borderColor: "var(--border-soft)", color: "var(--text)" }}
+              >
                 <option value="">Select Programme</option>
                 {qualifications.map((q) => (
                   <option key={q.id} value={q.id}>{q.name} (NQF {q.nqf_level})</option>
                 ))}
               </select>
-              <input type="file" accept="image/*" onChange={(e) => setProfilePicFile(e.target.files[0])} className="w-full text-white" />
+              <div>
+                <label className="block text-xs text-[var(--text-muted)] mb-1">Profile picture (optional)</label>
+                <input
+                  type="file" accept="image/*"
+                  onChange={(e) => setProfilePicFile(e.target.files[0])}
+                  className="w-full text-sm text-[var(--text-muted)]"
+                />
+              </div>
             </>
           )}
 
-          <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required className="w-full px-4 py-3 rounded-xl bg-white bg-opacity-20 text-white placeholder-white border border-white border-opacity-30 backdrop-blur-md" />
-          <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required className="w-full px-4 py-3 rounded-xl bg-white bg-opacity-20 text-white placeholder-white border border-white border-opacity-30 backdrop-blur-md" />
+          <input
+            type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required
+            className={inputClass}
+            style={{ borderColor: "var(--border-soft)", color: "var(--text)" }}
+          />
+          <input
+            type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required
+            className={inputClass}
+            style={{ borderColor: "var(--border-soft)", color: "var(--text)" }}
+          />
 
-          <button type="submit" disabled={submitting} className="w-full py-3 mt-2 rounded-2xl bg-white bg-opacity-20 text-white font-semibold shadow-lg hover:shadow-2xl hover:scale-105 transform transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed">
+          <button
+            type="submit" disabled={submitting}
+            className="w-full py-3 mt-2 rounded-xl text-white font-medium transition-all hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{ background: "var(--brand-color)" }}
+          >
             {submitting ? "Please wait..." : mode === "signup" ? "Sign Up" : "Sign In"}
           </button>
         </form>
 
-        <p className="mt-4 text-center text-white text-opacity-80">
+        <p className="mt-4 text-center text-sm text-[var(--text-muted)]">
           {mode === "signup" ? (
-            <>Already have an account? <button onClick={() => setMode("signin")} className="text-yellow-300 hover:underline">Sign in</button></>
+            <>Already have an account?{" "}
+              <button onClick={() => setMode("signin")} className="font-medium" style={{ color: "var(--brand-color)" }}>
+                Sign in
+              </button>
+            </>
           ) : (
-            <>Don't have an account? <button onClick={() => setMode("signup")} className="text-yellow-300 hover:underline">Sign up</button></>
+            <>Don't have an account?{" "}
+              <button onClick={() => setMode("signup")} className="font-medium" style={{ color: "var(--brand-color)" }}>
+                Sign up
+              </button>
+            </>
           )}
         </p>
+        </div>
       </div>
     </>
   );

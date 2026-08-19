@@ -61,10 +61,10 @@ export default function MobileNavbar() {
       <div className="hidden md:flex items-center gap-3">
         {isAuthenticated && (
           <>
-            <Link href="/dashboard" className="p-2 rounded-lg hover:bg-white/5 transition-colors">
+            <Link href="/dashboard" className="p-2 rounded-lg hover:bg-black/5 transition-colors">
               <LayoutDashboard size={18} className="text-[var(--text-muted)]" />
             </Link>
-            <button className="p-2 rounded-lg hover:bg-white/5 transition-colors">
+            <button className="p-2 rounded-lg hover:bg-black/5 transition-colors">
               <Bell size={18} className="text-[var(--text-muted)]" />
             </button>
           </>
@@ -114,17 +114,17 @@ export default function MobileNavbar() {
               </div>
               {profile?.role === "institution_admin" && (
                 <>
-                  <Link href="/admin/institution-settings" className="block px-4 py-2.5 text-sm text-[var(--text-muted)] hover:text-white hover:bg-white/5 transition-colors">
+                  <Link href="/admin/institution-settings" className="block px-4 py-2.5 text-sm text-[var(--text-muted)] hover:text-white hover:bg-black/5 transition-colors">
                     Institution Settings
                   </Link>
-                  <Link href="/admin/billing" className="block px-4 py-2.5 text-sm text-[var(--text-muted)] hover:text-white hover:bg-white/5 transition-colors">
+                  <Link href="/admin/billing" className="block px-4 py-2.5 text-sm text-[var(--text-muted)] hover:text-white hover:bg-black/5 transition-colors">
                     Billing
                   </Link>
                 </>
               )}
               <button
                 onClick={signOut}
-                className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-[var(--text-muted)] hover:text-white hover:bg-white/5 transition-colors text-left"
+                className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-[var(--text-muted)] hover:text-white hover:bg-black/5 transition-colors text-left"
               >
                 <LogOut size={15} /> Sign Out
               </button>
@@ -147,7 +147,7 @@ export default function MobileNavbar() {
               key={item.name}
               href={item.href}
               onClick={() => setIsOpen(false)}
-              className="block px-3 py-2.5 rounded-lg text-sm text-[var(--text-muted)] hover:text-white hover:bg-white/5 transition-colors"
+              className="block px-3 py-2.5 rounded-lg text-sm text-[var(--text-muted)] hover:text-white hover:bg-black/5 transition-colors"
             >
               {item.name}
             </Link>
@@ -155,10 +155,10 @@ export default function MobileNavbar() {
 
           {isAuthenticated ? (
             <>
-              <Link href="/dashboard" onClick={() => setIsOpen(false)} className="block px-3 py-2.5 rounded-lg text-sm text-[var(--text-muted)] hover:text-white hover:bg-white/5 transition-colors">
+              <Link href="/dashboard" onClick={() => setIsOpen(false)} className="block px-3 py-2.5 rounded-lg text-sm text-[var(--text-muted)] hover:text-white hover:bg-black/5 transition-colors">
                 Dashboard
               </Link>
-              <button onClick={signOut} className="flex items-center gap-2 w-full px-3 py-2.5 rounded-lg text-sm text-red-300 hover:bg-white/5 transition-colors text-left">
+              <button onClick={signOut} className="flex items-center gap-2 w-full px-3 py-2.5 rounded-lg text-sm text-red-300 hover:bg-black/5 transition-colors text-left">
                 <LogOut size={15} /> Sign Out
               </button>
             </>
@@ -167,7 +167,7 @@ export default function MobileNavbar() {
               <button onClick={handleLoginClick} className="block w-full text-left px-3 py-2.5 rounded-lg text-sm font-medium" style={{ background: "var(--brand-color)" }}>
                 Sign In
               </button>
-              <button onClick={handleFacilitatorClick} className="block w-full text-left px-3 py-2.5 rounded-lg text-sm text-[var(--text-muted)] hover:text-white hover:bg-white/5 transition-colors">
+              <button onClick={handleFacilitatorClick} className="block w-full text-left px-3 py-2.5 rounded-lg text-sm text-[var(--text-muted)] hover:text-white hover:bg-black/5 transition-colors">
                 Institutions & Staff
               </button>
             </>

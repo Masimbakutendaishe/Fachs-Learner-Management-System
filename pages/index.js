@@ -20,7 +20,6 @@ export default function Home() {
     setIsOpen(true);
   };
 
-  // ✅ Fetch current session on page load
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSessionUser(session?.user ?? null);
@@ -34,160 +33,140 @@ export default function Home() {
   }, [supabase]);
 
   return (
-    <div className="flex flex-col items-center w-full text-center relative">
+    <div className="w-full">
       <Head>
-        <title>Fachs College LMS – Your Learning Hub</title>
+        <title>Fachs LMS – Learning Platform for Institutions</title>
         <meta
           name="description"
-          content="Explore Fachs College LMS: Access accredited qualifications, manage your modules, and experience AI-powered learning."
+          content="Explore Fachs LMS: accredited qualifications, live sessions, and a learning platform built for training providers and schools."
         />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" href="/collegelogo.png" />
         <link rel="apple-touch-icon" href="/collegelogo.png" />
-        <meta property="og:title" content="Fachs College LMS" />
-        <meta
-          property="og:description"
-          content="AI-enhanced learning, accredited qualifications, and a seamless student experience."
-        />
+        <meta property="og:title" content="Fachs LMS" />
+        <meta property="og:description" content="A learning platform built for training providers and schools." />
         <meta property="og:image" content="/collegelogo.png" />
         <meta property="og:type" content="website" />
       </Head>
 
-      {/* Fachs Logo */}
-      <div className="mb-2">
-         <img
-          src="/collegelogo.png"
-          alt="Fachs College Logo"
-          className="w-20 -mt-10 md:-mt-20 mx-auto"
-        />
-      </div>
+      {/* Hero */}
+      <section className="text-center max-w-3xl mx-auto pt-8 pb-16 animate-fade-up">
+        <p className="text-xs font-mono tracking-wide text-[var(--text-muted)] mb-4">
+          MULTI-INSTITUTION LEARNING PLATFORM
+        </p>
+        <h1 className="font-display text-4xl md:text-5xl font-semibold mb-4" style={{ color: "var(--text)" }}>
+          Learning, built for how your institution actually runs
+        </h1>
+        <p className="text-lg text-[var(--text-muted)] mb-8">
+          Qualifications, live sessions, assessments, and progress, all in one place.
+          Built for training providers and schools alike.
+        </p>
 
-      <h1 className="text-5xl font-bold mb-4 drop-shadow-lg">
-        Welcome to the Fachs College LMS
-      </h1>
-      <p className="text-xl -mt-2 mb-16 drop-shadow-md">
-        Explore our qualifications, access your modules, and experience our AI help and live Teams sessions—all in one place!
-      </p>
-
-      {/* Trigger Modal – only show if no user logged in */}
-      {!sessionUser && (
-        <div className="space-x-4 -mt-5 mb-12">
-          <Button
-            className="bg-white border-2 border-red-800 text-red-800 font-semibold px-6 py-3 rounded-xl shadow-lg hover:bg-red-800 hover:border-white hover:text-white hover:scale-105 transition"
-            onClick={() => openModal("signup")}
-          >
-            Get Started
-          </Button>
-          <Button
-            className="bg-white border-2 border-red-800 text-red-800 font-semibold px-6 py-3 rounded-xl shadow-lg hover:bg-red-800 hover:border-white hover:text-white hover:scale-105 transition"
-            onClick={() => openModal("signin")}
-          >
-            Sign In
-          </Button>
-        </div>
-      )}
-
-      {/* Section container */}
-      <div className="w-full max-w-5xl mx-auto mb-5 -mt-8 relative h-auto">
-        {/* Original Section */}
-        <div
-          className={`grid md:grid-cols-2 gap-8 transition-all duration-700 ${
-            isOpen
-              ? "-translate-x-full opacity-0 scale-90 pointer-events-none"
-              : "translate-x-0 opacity-100 scale-100"
-          }`}
-        >
-          {/* Left: Qualifications */}
-          <div className="space-y-6">
-            <h2 className="text-3xl font-semibold mb-4 drop-shadow-lg text-white">
-              Top Qualifications This Year
-            </h2>
-            <ul className="space-y-4">
-              {[
-                "NQF Level 4: Municipal Financial Management (MFMP)",
-                "NQF Level 5: Insurance",
-                "NQF Level 6: Risk Management",
-              ].map((course, idx) => (
-                <li
-                  key={idx}
-                  className="p-6 bg-white bg-opacity-20 backdrop-blur-md rounded-xl shadow-lg transform transition duration-500 hover:scale-105 hover:rotate-2 hover:shadow-2xl cursor-pointer text-white"
-                >
-                  {course}
-                </li>
-              ))}
-            </ul>
+        {!sessionUser && (
+          <div className="flex items-center justify-center gap-3 mb-8">
+            <Button
+              className="text-white font-medium px-6 py-3 rounded-xl transition-all hover:brightness-110"
+              style={{ background: "var(--brand-color)" }}
+              onClick={() => openModal("signup")}
+            >
+              Get Started
+            </Button>
+            <Button
+              className="bg-white border font-medium px-6 py-3 rounded-xl transition-colors hover:bg-gray-50"
+              style={{ borderColor: "var(--border-soft)", color: "var(--text)" }}
+              onClick={() => openModal("signin")}
+            >
+              Sign In
+            </Button>
           </div>
+        )}
 
-          {/* Right: Testimonials */}
-          <div className="relative bg-white bg-opacity-20 backdrop-blur-md rounded-xl shadow-2xl p-6 flex flex-col justify-center items-center text-white">
-            <h2 className="text-2xl font-semibold mb-6 drop-shadow-lg">
-              What Our Clients Say
-            </h2>
-            <div className="w-full">
-              <div className="relative w-full overflow-hidden">
-                <div className="flex flex-col items-center text-center space-y-4 animate-slide">
-                  <img
-                    src="/pg.jpg"
-                    alt="Client 1"
-                    className="w-20 h-20 rounded-full object-cover border-2 border-white"
-                  />
-                  <p className="text-lg font-medium drop-shadow-lg">
-                    "Fachs College LMS transformed our learning process!"
-                  </p>
-                  <span className="text-sm opacity-70">
-                    - Sphiwe, Tshwane Municipality
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
+        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-mono" style={{ background: "var(--seal-gold-soft)", color: "var(--seal-gold)" }}>
+          <span className="w-1.5 h-1.5 rounded-full" style={{ background: "var(--seal-gold)" }} />
+          QCTO & SETA Accredited Programmes
         </div>
 
-        {/* Auth Modal slides in over the section */}
         <AuthModal isOpen={isOpen} onClose={() => setIsOpen(false)} mode={mode} />
-      </div>
+      </section>
 
-      <section className="w-full max-w-6xl mx-auto mt-5">
-        <div className="backdrop-blur-md bg-white/10 rounded-3xl shadow-lg p-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center text-white">
+      {/* Qualifications + Testimonial */}
+      <section className="grid md:grid-cols-2 gap-6 max-w-5xl mx-auto mb-12">
+        <div className="paper p-6 card-lift animate-fade-up stagger-1">
+          <h2 className="font-display text-xl font-semibold mb-4" style={{ color: "var(--text)" }}>
+            Top Qualifications This Year
+          </h2>
+          <ul className="space-y-3">
+            {[
+              "NQF Level 4: Municipal Financial Management (MFMP)",
+              "NQF Level 5: Insurance",
+              "NQF Level 6: Risk Management",
+            ].map((course, idx) => (
+              <li
+                key={idx}
+                className="p-4 rounded-xl text-sm font-medium transition-colors hover:bg-gray-50 cursor-pointer"
+                style={{ background: "var(--paper-muted)", color: "var(--text)" }}
+              >
+                {course}
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="paper p-6 card-lift flex flex-col justify-center items-center text-center animate-fade-up stagger-2">
+          <h2 className="font-display text-xl font-semibold mb-6" style={{ color: "var(--text)" }}>
+            What Our Clients Say
+          </h2>
+          <img
+            src="/pg.jpg"
+            alt="Client"
+            className="w-16 h-16 rounded-full object-cover mb-4"
+            style={{ border: "2px solid var(--seal-gold)" }}
+          />
+          <p className="text-base font-medium mb-2" style={{ color: "var(--text)" }}>
+            "Fachs LMS transformed our learning process!"
+          </p>
+          <span className="text-sm text-[var(--text-muted)]">— Sphiwe, Tshwane Municipality</span>
+        </div>
+      </section>
+
+      {/* Stats */}
+      <section className="max-w-5xl mx-auto mb-16">
+        <div className="paper p-8 animate-fade-up stagger-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
             <div>
-              <span className="text-4xl font-extrabold">
+              <span className="font-mono text-3xl font-semibold" style={{ color: "var(--brand-color)" }}>
                 <CountUp end={200} duration={2}>
                   {({ countUpRef, start }) => (
                     <VisibilitySensor onChange={start} delayedCall>
-                      <span>
-                        <span ref={countUpRef} />+
-                      </span>
+                      <span><span ref={countUpRef} />+</span>
                     </VisibilitySensor>
                   )}
                 </CountUp>
               </span>
-              <p className="mt-2 text-lg">Qualifications</p>
+              <p className="mt-2 text-sm text-[var(--text-muted)]">Qualifications</p>
             </div>
 
             <div>
-              <span className="text-4xl font-extrabold">
+              <span className="font-mono text-3xl font-semibold" style={{ color: "var(--brand-color)" }}>
                 <CountUp end={50} duration={2}>
                   {({ countUpRef, start }) => (
                     <VisibilitySensor onChange={start} delayedCall>
-                      <span>
-                        <span ref={countUpRef} />+
-                      </span>
+                      <span><span ref={countUpRef} />+</span>
                     </VisibilitySensor>
                   )}
                 </CountUp>
               </span>
-              <p className="mt-2 text-lg">Facilitators</p>
+              <p className="mt-2 text-sm text-[var(--text-muted)]">Facilitators</p>
             </div>
 
             <div>
-              <span className="text-4xl font-extrabold">QCTO</span>
-              <p className="mt-2 text-lg">Accredited</p>
+              <span className="font-mono text-3xl font-semibold" style={{ color: "var(--seal-gold)" }}>QCTO</span>
+              <p className="mt-2 text-sm text-[var(--text-muted)]">Accredited</p>
             </div>
 
             <div>
-              <span className="text-4xl font-extrabold">SETA</span>
-              <p className="mt-2 text-lg">Programmes</p>
+              <span className="font-mono text-3xl font-semibold" style={{ color: "var(--seal-gold)" }}>SETA</span>
+              <p className="mt-2 text-sm text-[var(--text-muted)]">Programmes</p>
             </div>
           </div>
         </div>
@@ -196,30 +175,17 @@ export default function Home() {
       {/* Floating Chat Button */}
       <button
         onClick={() => setIsChatOpen(true)}
-        className="fixed bottom-6 left-6 z-40 md:z-50 bg-gradient-to-r from-red-700 to-red-900 text-white font-semibold px-4 md:px-5 py-2 md:py-3 rounded-full flex items-center space-x-2 hover:scale-105 hover:shadow-xl transition max-w-[90%] md:max-w-[300px]"
+        className="fixed bottom-6 left-6 z-40 md:z-50 text-white font-medium px-4 md:px-5 py-2 md:py-3 rounded-full flex items-center space-x-2 shadow-lg hover:scale-105 hover:shadow-xl transition max-w-[90%] md:max-w-[300px]"
+        style={{ background: "var(--brand-color)" }}
       >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          strokeWidth={2}
-          stroke="currentColor"
-          className="w-5 h-5 md:w-6 md:h-6"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M7 8h10M7 12h4m1 8c-4.418 0-8-3.134-8-7s3.582-7 8-7 8 3.134 8 7c0 1.386-.39 2.685-1.07 3.77L21 20l-4.26-1.705A7.963 7.963 0 0113 20z"
-          />
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 md:w-6 md:h-6">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M7 8h10M7 12h4m1 8c-4.418 0-8-3.134-8-7s3.582-7 8-7 8 3.134 8 7c0 1.386-.39 2.685-1.07 3.77L21 20l-4.26-1.705A7.963 7.963 0 0113 20z" />
         </svg>
-
         <span className="hidden sm:inline">Ask Fachs AI</span>
         <span className="sm:hidden">Ask AI</span>
       </button>
 
-      {/* Chat Modal */}
       <ChatModal isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
     </div>
   );
 }
-
