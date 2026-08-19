@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { X } from "lucide-react";
 import { createClient } from "../lib/supabase/client";
 import { useRouter } from "next/router";
+import Portal from "./Portal";
 
 export default function AuthModal({ isOpen, onClose, onSelectQualification, mode: initialMode }) {
   const supabase = createClient();
@@ -167,7 +168,7 @@ export default function AuthModal({ isOpen, onClose, onSelectQualification, mode
     "w-full px-4 py-3 rounded-xl border text-sm transition-colors focus:outline-none focus:ring-2";
 
   return (
-    <>
+    <Portal>
       {isOpen && (
         <div
           onClick={onClose}
@@ -176,12 +177,12 @@ export default function AuthModal({ isOpen, onClose, onSelectQualification, mode
       )}
 
       <div
-        className={`fixed inset-0 z-40 overflow-y-auto flex items-start md:items-center justify-center p-4 ${
+        className={`fixed inset-0 z-40 flex items-center justify-center p-4 ${
           isOpen ? "" : "pointer-events-none"
         }`}
       >
         <div
-          className={`w-full max-w-md rounded-2xl shadow-2xl my-8 md:my-0 p-8 transition-all duration-300 ease-out ${
+          className={`relative w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl shadow-2xl p-8 transition-all duration-300 ease-out ${
             isOpen ? "scale-100 opacity-100" : "scale-95 opacity-0"
           }`}
           style={{ background: "var(--paper)" }}
@@ -286,6 +287,6 @@ export default function AuthModal({ isOpen, onClose, onSelectQualification, mode
         </p>
         </div>
       </div>
-    </>
+    </Portal>
   );
 }
