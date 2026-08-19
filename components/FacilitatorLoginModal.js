@@ -83,13 +83,13 @@ export default function FacilitatorLoginModal({ isOpen, onClose, onSwitchToLearn
       if (profileError) {
         return alert("Error verifying your profile. Please try again.");
       }
-      if (!profile || profile.role !== "facilitator") {
+      if (!profile || !["facilitator", "institution_admin"].includes(profile.role)) {
         await supabase.auth.signOut();
-        return alert("Access denied. Only facilitators can log in here.");
+        return alert("Access denied. This login is for facilitators and institution admins only.");
       }
 
       onClose();
-      router.push("/facilitator/dashboard");
+      router.push(profile.role === "institution_admin" ? "/admin/institution-settings" : "/facilitator/dashboard");
     } finally {
       setSubmitting(false);
     }

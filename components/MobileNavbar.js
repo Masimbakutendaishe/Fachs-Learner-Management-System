@@ -19,7 +19,7 @@ export default function MobileNavbar() {
 
   const handleLoginClick = () => {
     if (isAuthenticated) {
-      alert("You are already logged in. Please logout first.");
+      alert("You're already signed in. Sign out first to switch accounts.");
       return;
     }
     setAuthModalOpen(true);
@@ -28,7 +28,7 @@ export default function MobileNavbar() {
 
   const handleFacilitatorClick = () => {
     if (isAuthenticated) {
-      alert("You are already logged in. Logout first to switch roles.");
+      alert("You're already signed in. Sign out first to switch accounts.");
       return;
     }
     setIsFacilitatorModalOpen(true);
@@ -37,109 +37,141 @@ export default function MobileNavbar() {
 
   const menuItems = [
     { name: "Home", href: "/" },
-    { name: "Browse Qualifications", href: "/qualifications" },
+    { name: "Qualifications", href: "/qualifications" },
   ];
 
   return (
-    <nav className="flex justify-between items-center text-white relative">
-      <div className="hidden md:flex items-center space-x-4 font-bold text-xl">
+    <nav className="flex justify-between items-center h-16 relative" style={{ color: "var(--text)" }}>
+      <Link href="/" className="flex items-center gap-2 font-display font-semibold text-lg tracking-tight">
         {institution?.logo_url ? (
           <img src={institution.logo_url} alt={institution.name} className="h-8 w-auto object-contain" />
         ) : (
-          <span>{institution?.name || "Fachs College LMS"}</span>
+          <span>{institution?.name || "Fachs LMS"}</span>
         )}
-        {isAuthenticated && (
-          <div className="flex items-center space-x-3 ml-4">
-            <Link href="/dashboard"><LayoutDashboard size={24} /></Link>
-            <Bell size={24} />
-          </div>
-        )}
-      </div>
+      </Link>
 
-      <div className="hidden md:flex items-center space-x-6">
+      <div className="hidden md:flex items-center gap-8">
         {menuItems.map((item) => (
-          <Link key={item.name} href={item.href} className="hover:text-yellow-400">
+          <Link key={item.name} href={item.href} className="text-sm text-[var(--text-muted)] hover:text-white transition-colors">
             {item.name}
           </Link>
         ))}
+      </div>
 
-        {!isAuthenticated ? (
+      <div className="hidden md:flex items-center gap-3">
+        {isAuthenticated && (
           <>
-            <button onClick={handleLoginClick} className="px-3 py-1 rounded-full bg-white font-bold" style={{ color: "var(--brand-color)" }}>
-              Sign In
-            </button>
-            <button onClick={handleFacilitatorClick} className="px-3 py-1 rounded-full bg-yellow-500 text-black">
-              Not a Learner?
+            <Link href="/dashboard" className="p-2 rounded-lg hover:bg-white/5 transition-colors">
+              <LayoutDashboard size={18} className="text-[var(--text-muted)]" />
+            </Link>
+            <button className="p-2 rounded-lg hover:bg-white/5 transition-colors">
+              <Bell size={18} className="text-[var(--text-muted)]" />
             </button>
           </>
+        )}
+
+        {!isAuthenticated ? (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleFacilitatorClick}
+              className="px-4 py-2 rounded-lg text-sm font-medium text-[var(--text-muted)] hover:text-white transition-colors"
+            >
+              Institutions & Staff
+            </button>
+            <button
+              onClick={handleLoginClick}
+              className="px-4 py-2 rounded-lg text-sm font-medium text-white transition-all hover:brightness-110"
+              style={{ background: "var(--brand-color)" }}
+            >
+              Sign In
+            </button>
+          </div>
         ) : (
           <div
             className="relative"
             onMouseEnter={() => setShowDropdown(true)}
             onMouseLeave={() => setShowDropdown(false)}
           >
-            <button className="flex items-center space-x-2">
+            <button className="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-full hover:bg-black/5 transition-colors">
               {profile?.profile_pic ? (
-                <img src={profile.profile_pic} className="w-8 h-8 rounded-full object-cover" />
+                <img src={profile.profile_pic} className="w-7 h-7 rounded-full object-cover" />
               ) : (
-                <User size={24} />
+                <div className="w-7 h-7 rounded-full flex items-center justify-center" style={{ background: "var(--surface-2)" }}>
+                  <User size={14} className="text-[var(--text-muted)]" />
+                </div>
               )}
-              <span>{displayName}</span>
+              <span className="text-sm font-medium">{displayName}</span>
             </button>
-            <div className={`absolute right-0 mt-2 w-56 bg-white text-black rounded-lg shadow-lg
-              ${showDropdown ? "opacity-100 visible" : "opacity-0 invisible"}`}>
-              <div className="px-4 py-2 border-b">{user?.email}</div>
-              <div className="px-4 py-2 text-xs text-gray-500 capitalize">{profile?.role}</div>
-              <button onClick={signOut} className="flex w-full px-4 py-2 hover:bg-gray-100">
-                <LogOut size={18} className="mr-2" /> Logout
+            <div
+              className={`absolute right-0 mt-2 w-60 rounded-xl shadow-2xl border overflow-hidden transition-all duration-200 ${
+                showDropdown ? "opacity-100 visible translate-y-0" : "opacity-0 invisible -translate-y-1"
+              }`}
+              style={{ background: "var(--surface)", borderColor: "var(--border-soft)" }}
+            >
+              <div className="px-4 py-3 border-b" style={{ borderColor: "var(--border-soft)" }}>
+                <p className="text-sm text-white truncate">{user?.email}</p>
+                <p className="text-xs text-[var(--text-muted)] capitalize font-mono mt-0.5">{profile?.role?.replace("_", " ")}</p>
+              </div>
+              {profile?.role === "institution_admin" && (
+                <>
+                  <Link href="/admin/institution-settings" className="block px-4 py-2.5 text-sm text-[var(--text-muted)] hover:text-white hover:bg-white/5 transition-colors">
+                    Institution Settings
+                  </Link>
+                  <Link href="/admin/billing" className="block px-4 py-2.5 text-sm text-[var(--text-muted)] hover:text-white hover:bg-white/5 transition-colors">
+                    Billing
+                  </Link>
+                </>
+              )}
+              <button
+                onClick={signOut}
+                className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-[var(--text-muted)] hover:text-white hover:bg-white/5 transition-colors text-left"
+              >
+                <LogOut size={15} /> Sign Out
               </button>
             </div>
           </div>
         )}
       </div>
 
-      <button className="md:hidden" onClick={() => setIsOpen(!isOpen)}>
-        {isOpen ? <X size={28} /> : <Menu size={28} />}
+      <button className="md:hidden p-2" onClick={() => setIsOpen(!isOpen)}>
+        {isOpen ? <X size={24} /> : <Menu size={24} />}
       </button>
 
       {isOpen && (
-        <div className="absolute top-full left-0 w-full md:hidden bg-black/90 flex flex-col space-y-4 p-4 z-50">
+        <div
+          className="absolute top-full left-0 right-0 md:hidden border-t rounded-b-2xl shadow-2xl p-4 space-y-1 z-50"
+          style={{ background: "var(--surface)", borderColor: "var(--border-soft)" }}
+        >
           {menuItems.map((item) => (
-            <Link key={item.name} href={item.href} onClick={() => setIsOpen(false)} className="hover:text-yellow-400">
+            <Link
+              key={item.name}
+              href={item.href}
+              onClick={() => setIsOpen(false)}
+              className="block px-3 py-2.5 rounded-lg text-sm text-[var(--text-muted)] hover:text-white hover:bg-white/5 transition-colors"
+            >
               {item.name}
             </Link>
           ))}
 
-          <Link href="/dashboard" onClick={() => setIsOpen(false)} className="flex items-center space-x-2 text-white hover:underline">
-            <LayoutDashboard size={20} />
-            <span>Dashboard</span>
-          </Link>
-
           {isAuthenticated ? (
-            <div className="flex flex-col text-white space-y-2">
-              <div className="flex items-center space-x-2">
-                {profile?.profile_pic ? (
-                  <img src={profile.profile_pic} className="w-8 h-8 rounded-full object-cover" />
-                ) : (
-                  <User size={24} />
-                )}
-                <span>{displayName}</span>
-              </div>
-              <button onClick={signOut} className="flex items-center space-x-2 text-red-300 hover:text-red-100">
-                <LogOut size={20} />
-                <span>Logout</span>
+            <>
+              <Link href="/dashboard" onClick={() => setIsOpen(false)} className="block px-3 py-2.5 rounded-lg text-sm text-[var(--text-muted)] hover:text-white hover:bg-white/5 transition-colors">
+                Dashboard
+              </Link>
+              <button onClick={signOut} className="flex items-center gap-2 w-full px-3 py-2.5 rounded-lg text-sm text-red-300 hover:bg-white/5 transition-colors text-left">
+                <LogOut size={15} /> Sign Out
               </button>
-            </div>
+            </>
           ) : (
-            <button onClick={handleLoginClick} className="text-yellow-300 hover:text-yellow-100 flex items-center space-x-1">
-              <User size={20} />
-              <span>Login</span>
-            </button>
+            <>
+              <button onClick={handleLoginClick} className="block w-full text-left px-3 py-2.5 rounded-lg text-sm font-medium" style={{ background: "var(--brand-color)" }}>
+                Sign In
+              </button>
+              <button onClick={handleFacilitatorClick} className="block w-full text-left px-3 py-2.5 rounded-lg text-sm text-[var(--text-muted)] hover:text-white hover:bg-white/5 transition-colors">
+                Institutions & Staff
+              </button>
+            </>
           )}
-
-          <button onClick={handleFacilitatorClick} className="text-yellow-300 hover:text-yellow-100 text-left">
-            Not a Learner?
-          </button>
         </div>
       )}
 

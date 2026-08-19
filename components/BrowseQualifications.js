@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
-import PaymentModal from "./PaymentModal";
 import AuthModal from "./AuthModal";
 import { createClient } from "../lib/supabase/client";
 import { useAuth } from "../pages/context/AuthContext";
@@ -63,76 +62,68 @@ export default function BrowseQualifications() {
     };
   }, [selected, authOpen]);
 
-  // ✅ FIXED ENROLL LOGIC (wait for sessionLoading)
-  const handleEnrollClick = () => {
-    if (sessionLoading) return; // do nothing until we know session state
+  const handleEnrollClick = async () => {
+    if (sessionLoading) return;
 
     if (!sessionUser) {
       setAuthOpen(true);
       setAuthMode("signup");
-    } else {
-      setPaymentOpen(true);
-    }
-  };
-
-  // Called after PaymentModal closes successfully
-  const handleEnrollmentConfirmed = async () => {
-    setPaymentOpen(false);
-
-    if (!sessionUser || !selected) {
-      console.warn("Enrollment attempt aborted: missing session user or selected qualification.");
       return;
     }
 
-    try {
-      const enrollmentPayload = {
-        user_id: sessionUser.id,
-        programme_id: selected.id,
-        institution_id: selected.institution_id,
-        progress: 0,
-        credits_earned: 0,
-        credits_total: selected.credits || 0,
-        payment_status: "paid",
-        enrolled_at: new Date().toISOString(),
-      };
+    if (!selected) return;
 
+    // Find an existing enrollment for this programme, or create one first
+    const { data: existing } = await supabase
+      .from("enrollments")
+      .select("id, payment_status")
+      .eq("user_id", sessionUser.id)
+      .eq("programme_id", selected.id)
+      .maybeSingle();
 
-      console.log("Attempting to save enrollment with payload:", enrollmentPayload);
+    let enrollmentId = existing?.id;
 
-      const { data, error } = await supabase
+    if (existing?.payment_status === "paid") {
+      alert("You're already enrolled and paid up for this programme.");
+      return;
+    }
+
+    if (!enrollmentId) {
+      const { data: created, error } = await supabase
         .from("enrollments")
-        .insert([enrollmentPayload])
-        .select();
+        .insert([{
+          user_id: sessionUser.id,
+          programme_id: selected.id,
+          institution_id: selected.institution_id,
+          progress: 0,
+          credits_earned: 0,
+          credits_total: selected.credits || 0,
+          payment_status: "failed",
+          enrolled_at: new Date().toISOString(),
+        }])
+        .select()
+        .single();
 
       if (error) {
-        console.error("Supabase returned an error while adding enrollment:", error);
-        console.log("Enrollment payload that caused the error:", enrollmentPayload);
-        alert("Failed to save enrollment. Check console for details.");
-      } else if (data) {
-        console.log("Enrollment successfully added:", data);
-        alert(`Successfully enrolled in ${selected.title}!`);
-      } else {
-        console.warn("No error but no data returned from Supabase insert.");
+        alert("Could not start enrollment: " + error.message);
+        return;
       }
-    } catch (err) {
-      console.error("Unexpected error during enrollment:", err);
-      console.log("Enrollment payload at time of error:", {
-        user_id: sessionUser.id,
-        programme_id: selected.id,
-        progress: 0,
-        credits_earned: 0,
-        credits_total: selected.credits || 0,
-        credits_remaining: selected.credits || 0,
-        payment_status: "paid",
-        enrolled_at: new Date().toISOString(),
-      });
-      alert("An unexpected error occurred. Check console for details.");
+      enrollmentId = created.id;
     }
+
+    const res = await fetch("/api/create-enrollment-checkout-session", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ enrollmentId }),
+    });
+    const data = await res.json();
+    if (data.url) window.location.href = data.url;
+    else alert(data.error || "Could not start payment");
   };
 
   const handleSelectQualificationAfterLogin = () => {
     setAuthOpen(false);
-    if (selected) setPaymentOpen(true);
+    if (selected) handleEnrollClick();
   };
 
   return (
@@ -158,16 +149,6 @@ export default function BrowseQualifications() {
           qualification={selected}
           onClose={() => setSelected(null)}
           onEnroll={handleEnrollClick}
-        />
-      )}
-
-      {paymentOpen && selected && sessionUser && (
-        <PaymentModal
-          isOpen={paymentOpen}
-          onClose={handleEnrollmentConfirmed} // <-- updated callback
-          programme={selected}
-          userId={sessionUser.id}
-          supabase={supabase}
         />
       )}
 

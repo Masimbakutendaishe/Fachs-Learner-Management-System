@@ -2,8 +2,7 @@
   "/_app": "pages/_app.js",
   "/_error": "pages/_error.js",
   "/_document": "pages/_document.js",
-  "/auth/signin": "pages/auth/signin.js",
-  "/": "pages/index.js",
   "/qualifications": "pages/qualifications.js",
-  "/dashboard": "pages/dashboard.js"
+  "/dashboard": "pages/dashboard.js",
+  "/": "pages/index.js"
 }

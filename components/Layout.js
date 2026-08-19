@@ -11,31 +11,23 @@ export default function Layout({ children }) {
   useEffect(() => {
     document.documentElement.style.setProperty(
       "--brand-color",
-      institution?.theme_color || "#7f1d1d"
+      institution?.theme_color || "#2F5FE0"
     );
   }, [institution]);
+
   return (
-    <div className="flex flex-col items-center justify-start min-h-screen bg-gray-100 px-4 overflow-hidden">
-      <div className="mt-2 relative w-[95vw] h-[95vh] bg-gradient-to-br from-blue-900 via-red-900 to-blue-700 shadow-2xl flex flex-col rounded-3xl overflow-hidden">
-        <div className="flex flex-col flex-grow overflow-y-auto overscroll-contain">
-          <div
-            className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2
-                        w-48 h-12 bg-gray-100 rounded-b-3xl shadow-md z-20"
-          ></div>
-
-          <div className="p-6 z-30 relative">
-            <MobileNavbar />
-          </div>
-
-          <div className="flex-grow w-full px-6 md:px-12 py-8 z-10 text-white">
-            {children}
-          </div>
-
-          <div className="p-6 z-20">
-            <Footer />
-          </div>
+    <div className="min-h-screen" style={{ background: "var(--shell)" }}>
+      <div className="sticky top-0 z-40 border-b" style={{ borderColor: "var(--border-soft)", background: "rgba(255,255,255,0.85)", backdropFilter: "blur(12px)" }}>
+        <div className="max-w-6xl mx-auto px-4 md:px-6">
+          <MobileNavbar />
         </div>
       </div>
+
+      <main className="max-w-6xl mx-auto px-4 md:px-6 py-8">
+        {children}
+      </main>
+
+      <Footer />
     </div>
   );
 }

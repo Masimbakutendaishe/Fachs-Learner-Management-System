@@ -14,7 +14,7 @@ const PROTECTED_PREFIXES = [
 
 const ROLE_PREFIXES = {
   "/facilitator": ["facilitator"],
-  "/admin": ["admin", "superadmin"],
+  "/admin": ["institution_admin", "superadmin"],
 };
 
 export async function middleware(request) {

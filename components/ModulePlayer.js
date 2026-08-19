@@ -1,7 +1,7 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
 import { supabase } from "../lib/supabase";
-import { getCurrentUserId } from "./AuthModal";
+import { useAuth } from "../pages/context/AuthContext";
 import {
   MessageCircle,
   Video as VideoIcon,
@@ -336,6 +336,7 @@ const LearnerGuide = ({ title, url, chapters, onComplete }) => {
 
 /* ---------- ModulePlayer ---------- */
 export default function ModulePlayer() {
+  const { user } = useAuth();
   const [unitWeek, setUnitWeek] = useState(null);
   const [loading, setLoading] = useState(true);
   const [currentActivity, setCurrentActivity] = useState(null);
@@ -351,7 +352,7 @@ export default function ModulePlayer() {
     async function fetchUnitWeek() {
       setLoading(true);
       try {
-        let userId = getCurrentUserId();
+        let userId = user?.id;
         if (!userId) {
           const { data: { session } } = await supabase.auth.getSession();
           if (!session) { setLoading(false); return; }

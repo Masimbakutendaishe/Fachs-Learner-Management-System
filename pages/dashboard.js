@@ -1,209 +1,157 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/router";
 import { createClient } from "../lib/supabase/client";
+import SealProgress from "../components/SealProgress";
 
 export default function Dashboard() {
   const supabase = createClient();
+  const router = useRouter();
   const [user, setUser] = useState(null);
   const [enrollments, setEnrollments] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const handleCompletePayment = async (enrollmentId) => {
+    const res = await fetch("/api/create-enrollment-checkout-session", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ enrollmentId }),
+    });
+    const data = await res.json();
+    if (data.url) window.location.href = data.url;
+    else alert(data.error || "Could not start payment");
+  };
+
   useEffect(() => {
     const fetchData = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      const { data: { user } } = await supabase.auth.getUser();
       setUser(user);
 
       if (!user) {
-        setEnrollments([]);
-        setLoading(false);
+        router.push("/auth/signin");
         return;
       }
 
       const { data, error } = await supabase
         .from("enrollments")
-        .select(
-          `
-          id,
-          progress,
-          credits_earned,
-          credits_total,
-          enrolled_at,
-          programme_id,
-          payment_status,
-          programmes (
-            id,
-            name
-          )
-        `
-        )
-        .eq("user_id", user.id);
+        .select(`
+          id, progress, credits_earned, credits_total, enrolled_at, programme_id, payment_status,
+          programmes ( id, name )
+        `)
+        .eq("user_id", user.id)
+        .order("enrolled_at", { ascending: false });
 
-      if (error) console.error("❌ Error fetching enrollments:", error);
+      if (error) console.error(error);
       setEnrollments(data || []);
       setLoading(false);
     };
-
     fetchData();
   }, [supabase]);
 
   if (loading) {
     return (
-      <div className="p-6 text-center text-gray-300 font-semibold">
+      <div className="py-24 text-center text-[var(--text-muted)] font-mono text-sm">
         Loading your dashboard...
       </div>
     );
   }
 
   return (
-    <div className="p-6 space-y-8">
-      {/* Greeting */}
-      <header className="text-center">
-        <h1 className="text-3xl font-extrabold text-white drop-shadow-lg">
-          {user?.user_metadata?.full_name || user?.email?.split("@")[0]}{" "}
-          s Dashboard
+    <div className="space-y-8">
+      <header className="animate-fade-up">
+        <p className="text-xs font-mono text-[var(--text-muted)] mb-1">DASHBOARD</p>
+        <h1 className="font-display text-3xl font-semibold" style={{ color: "var(--text)" }}>
+          {user?.user_metadata?.full_name || user?.email?.split("@")[0]}
         </h1>
-        <p className="text-gray-200 mt-1 font-medium">
-          Here is your learning journey today
-        </p>
+        <p className="text-[var(--text-muted)] text-sm mt-1">Your qualifications and progress</p>
       </header>
 
-      {/* Main Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
-        {/* Enrollments */}
-        <section className="flex flex-col">
-          <h2 className="text-2xl font-bold mb-4 text-white">
-            Registered Qualifications
-          </h2>
-          {enrollments.length === 0 ? (
-            <p className="text-gray-400 font-medium">No enrollments found.</p>
-          ) : (
-            <ul className="grid gap-6 flex-1">
-              {enrollments.map((enrollment) => {
-                const programmeName =
-                  enrollment.programmes?.name ||
-                  `Programme #${enrollment.programme_id}`;
-                const progress = enrollment.progress ?? 0;
-                const creditsEarned = enrollment.credits_earned ?? 0;
-                const creditsTotal = enrollment.credits_total ?? 0;
+      <section>
+        <h2 className="font-display text-lg font-semibold mb-4 animate-fade-up stagger-1" style={{ color: "var(--text)" }}>
+          Registered Qualifications
+        </h2>
 
-                return (
-                  <li
-                    key={enrollment.id}
-                    className="relative p-5 rounded-2xl shadow-md 
-                               bg-gray-900/40 backdrop-blur-md 
-                               border border-gray-700 hover:scale-[1.02] 
-                               transition transform"
-                  >
-                    <img
-                      src="/dsk.jpg"
-                      alt={programmeName}
-                      className="w-full h-36 object-cover rounded-xl mb-3 shadow-sm"
-                    />
-
-                    <h3 className="text-lg font-bold text-white mb-2">
-                      {programmeName}
-                    </h3>
-
-                    <p className="text-gray-200 font-medium">
-                      Progress: {progress}%
-                    </p>
-                    <div className="w-full bg-gray-700 rounded-full h-3 mb-2">
-                      <div
-                        className="bg-blue-500 h-3 rounded-full transition-all"
-                        style={{ width: `${progress}%` }}
-                      ></div>
+        {enrollments.length === 0 ? (
+          <div className="paper p-8 text-center animate-fade-up stagger-1">
+            <p className="text-gray-500 text-sm">No enrollments yet.</p>
+            <Link href="/qualifications" className="inline-block mt-3 text-sm font-medium" style={{ color: "var(--brand-color)" }}>
+              Browse qualifications →
+            </Link>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {enrollments.map((enrollment, i) => {
+              const programmeName = enrollment.programmes?.name || `Programme #${enrollment.programme_id}`;
+              return (
+                <div
+                  key={enrollment.id}
+                  className={`paper p-5 card-lift animate-fade-up stagger-${Math.min(i + 1, 4)}`}
+                >
+                  <div className="flex items-start justify-between gap-3 mb-4">
+                    <div>
+                      <h3 className="font-display font-semibold text-gray-900">{programmeName}</h3>
+                      <p className="text-xs text-gray-400 font-mono mt-1">
+                        Enrolled {enrollment.enrolled_at ? new Date(enrollment.enrolled_at).toLocaleDateString() : "—"}
+                      </p>
                     </div>
+                    <SealProgress
+                      percent={enrollment.progress ?? 0}
+                      size={52}
+                    />
+                  </div>
 
-                    <p className="text-gray-200 font-medium">
-                      Credits: {creditsEarned}/{creditsTotal}
-                    </p>
-                    <p className="text-gray-400 text-sm font-semibold">
-                      Enrolled:{" "}
-                      {enrollment.enrolled_at
-                        ? new Date(
-                            enrollment.enrolled_at
-                          ).toLocaleDateString()
-                        : "Unknown"}
-                    </p>
-                    <p
-                      className={`text-sm font-bold mt-1 ${
+                  <div className="flex items-center justify-between text-sm mb-4">
+                    <span className="text-gray-500 font-mono text-xs">
+                      {enrollment.credits_earned ?? 0}/{enrollment.credits_total ?? 0} credits
+                    </span>
+                    <span
+                      className={`text-xs font-medium px-2 py-1 rounded-full ${
                         enrollment.payment_status === "paid"
-                          ? "text-green-400"
-                          : enrollment.payment_status === "failed"
-                          ? "text-red-400"
-                          : "text-yellow-400"
+                          ? "bg-green-50 text-green-700"
+                          : "bg-amber-50 text-amber-700"
                       }`}
                     >
-                      Payment: {enrollment.payment_status}
-                    </p>
+                      {enrollment.payment_status === "paid" ? "Paid" : "Payment due"}
+                    </span>
+                  </div>
 
-                 <Link
-  href={`/popia`} 
-  className="mt-3 block text-red-500 font-bold hover:underline"
->
-  POPIA Declaration
-</Link>
+                  <div className="flex items-center gap-2">
+                    <Link
+                      href={`/module-player/${enrollment.id}`}
+                      className="flex-1 text-center py-2 rounded-lg text-sm font-medium text-white transition-all hover:brightness-110"
+                      style={{ background: "var(--brand-color)" }}
+                    >
+                      Continue →
+                    </Link>
+                    {enrollment.payment_status !== "paid" && (
+                      <button
+                        onClick={() => handleCompletePayment(enrollment.id)}
+                        className="px-3 py-2 rounded-lg text-sm font-medium bg-amber-400 text-amber-900 hover:bg-amber-300 transition-colors"
+                      >
+                        Pay
+                      </button>
+                    )}
+                  </div>
 
-<Link
-  href={`/module-player/${enrollment.id}`} 
-  className="mt-3 block text-blue-400 font-bold hover:underline"
->
-  Go to programme →
-</Link>
-
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </section>
-
-      {/* Announcements */}
-<section className="p-6 rounded-2xl bg-gray-800/60 backdrop-blur-md shadow-md border border-gray-700 flex flex-col">
-  <h2 className="text-xl font-extrabold text-white mb-4">
-    Announcements
-  </h2>
-  <ul className="list-disc ml-6 text-gray-200 font-medium space-y-2 flex-1">
-    <li>POE submissions for Unit Standards 14917 & 14921 are due this Friday – ensure all evidence is uploaded.</li>
-    <li>QCTO moderation visits will take place next week – please have all practical assessments ready.</li>
-
-    <li>New facilitators have joined for the upcoming modules – welcome them and check their office hours for support.</li>
-  </ul>
-</section>
-
-      </div>
-
-      {/* Study Tips */}
-      <section className="p-6 rounded-2xl bg-gray-100 shadow-md">
-        <h2 className="text-xl font-bold text-gray-900 mb-2">💡 Study Tips</h2>
-        <ul className="list-disc ml-6 text-gray-800 font-medium space-y-1">
-          <li>Break your study sessions into 25-minute chunks.</li>
-          <li>Revise with a friend – teaching helps retention.</li>
-          <li>Get enough rest! A fresh mind remembers more.</li>
-        </ul>
+                  <Link href="/popia" className="block mt-3 text-xs text-gray-400 hover:text-gray-600 transition-colors">
+                    POPIA Declaration
+                  </Link>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </section>
 
-      {/* Learner of the Month */}
-      <section className="p-6 rounded-2xl bg-gray-50 shadow-md text-center">
-        <h2 className="text-xl font-bold text-gray-900 mb-3">
-          🏆 Learner of the Month
-        </h2>
-        <div className="bg-gray-800/50 backdrop-blur-md border border-gray-700 p-6 rounded-2xl shadow-md inline-block">
-          <img
-            src="https://randomuser.me/api/portraits/women/44.jpg"
-            alt="Learner of the Month"
-            className="w-24 h-24 rounded-full mx-auto shadow-md mb-3"
-          />
-          <h3 className="font-bold text-lg text-white">Thandiwe Nkosi</h3>
-          <p className="text-gray-300 font-medium">
-            Completed 95% of her programme 🎉
-          </p>
-        </div>
+      <section className="paper p-6 animate-fade-up stagger-2">
+        <h2 className="font-display font-semibold text-gray-900 mb-3">Announcements</h2>
+        <ul className="space-y-2 text-sm text-gray-600">
+          <li>POE submissions for Unit Standards 14917 & 14921 are due this Friday.</li>
+          <li>QCTO moderation visits take place next week, have practical assessments ready.</li>
+          <li>New facilitators have joined for upcoming modules.</li>
+        </ul>
       </section>
     </div>
   );
 }
-

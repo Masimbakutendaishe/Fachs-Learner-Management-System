@@ -25,6 +25,17 @@ export default async function handler(req, res) {
   switch (event.type) {
     case "checkout.session.completed": {
       const session = event.data.object;
+
+      if (session.mode === "payment" && session.metadata?.enrollment_id) {
+        // Student paying for a single enrollment
+        await admin
+          .from("enrollments")
+          .update({ payment_status: "paid" })
+          .eq("id", session.metadata.enrollment_id);
+        break;
+      }
+
+      // Institution subscribing to a platform plan
       const { institution_id, plan_id } = session.metadata;
       await admin.from("subscriptions").insert({
         institution_id,
