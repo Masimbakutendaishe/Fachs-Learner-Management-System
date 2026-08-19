@@ -1,38 +1,26 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import PaymentModal from "./PaymentModal";
 import AuthModal from "./AuthModal";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { createClient } from "../lib/supabase/client";
+import { useAuth } from "../pages/context/AuthContext";
 
-const hardcodedQualifications = [
-  {
-    id: 1,
-    title: "Certificate in Municipal Financial Management",
-    nqf: "NQF Level 6",
-    image: "/mf.jpg",
-    description:
-      "This qualification equips learners with the skills to manage municipal finances effectively, ensuring compliance with PFMA and MFMA regulations.",
-    credits: 240,
-    duration: "12 months",
-    facilitator: "Dr. Thandi Nkosi",
-    applicationDeadline: "30 Sept 2025",
-  },
-  {
-    id: 2,
-    title: "National Certificate in Insurance",
-    nqf: "NQF Level 3",
-    image:
-      "https://images.unsplash.com/photo-1554224154-22dec7ec8818?auto=format&fit=crop&w=800&q=80",
-    description:
-      "Prepares learners for careers in the insurance industry with practical knowledge of underwriting, claims, and client relations.",
-    credits: 120,
-    duration: "6 months",
-    facilitator: "Mr. Sipho Dlamini",
-    applicationDeadline: "15 Oct 2025",
-  },
-];
+function normalizeProgramme(q) {
+  return {
+    id: q.id,
+    institution_id: q.institution_id,
+    title: q.name,
+    nqf: `NQF Level ${q.nqf_level}`,
+    image: q.image || "/dsk.jpg",
+    description: q.description || "",
+    credits: q.credits_total || 0,
+    duration: q.duration || "TBA",
+    facilitator: q.facilitator || "TBA",
+    applicationDeadline: q.application_deadline || "TBA",
+  };
+}
 
 export default function BrowseQualifications() {
   const [selected, setSelected] = useState(null);
@@ -40,26 +28,10 @@ export default function BrowseQualifications() {
   const [authOpen, setAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState("signup");
   const [programmes, setProgrammes] = useState([]);
-  const [sessionUser, setSessionUser] = useState(null);
-  const [sessionLoading, setSessionLoading] = useState(true);
 
-  const supabase = createClientComponentClient();
+  const supabase = createClient();
   const router = useRouter();
-
-  // ✅ USER SESSION CHECK (same approach as Navbar)
-  useEffect(() => {
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSessionUser(session?.user ?? null);
-      setSessionLoading(false);
-    });
-
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setSessionUser(user);
-      setSessionLoading(false);
-    });
-
-    return () => listener.subscription.unsubscribe();
-  }, [supabase]);
+  const { user: sessionUser, loading: sessionLoading } = useAuth();
 
   // Fetch programmes
   useEffect(() => {
@@ -70,7 +42,7 @@ export default function BrowseQualifications() {
         .order("name");
 
       if (error) console.error("Error fetching programmes:", error);
-      else setProgrammes(data || []);
+      else setProgrammes((data || []).map(normalizeProgramme));
     };
     fetchProgrammes();
   }, []);
@@ -78,9 +50,7 @@ export default function BrowseQualifications() {
   // Open qualification via query param
   useEffect(() => {
     if (router.query.selected) {
-      const qual = hardcodedQualifications
-        .concat(programmes)
-        .find((q) => q.id === Number(router.query.selected));
+      const qual = programmes.find((q) => q.id === Number(router.query.selected));
       if (qual) setSelected(qual);
     }
   }, [router.query.selected, programmes]);
@@ -115,15 +85,16 @@ export default function BrowseQualifications() {
     }
 
     try {
-     const enrollmentPayload = {
-  user_id: sessionUser.id,
-  programme_id: selected.id,
-  progress: 0,
-  credits_earned: 0,
-  credits_total: selected.credits || 0,
-  payment_status: "paid",
-  enrolled_at: new Date().toISOString(),
-};
+      const enrollmentPayload = {
+        user_id: sessionUser.id,
+        programme_id: selected.id,
+        institution_id: selected.institution_id,
+        progress: 0,
+        credits_earned: 0,
+        credits_total: selected.credits || 0,
+        payment_status: "paid",
+        enrolled_at: new Date().toISOString(),
+      };
 
 
       console.log("Attempting to save enrollment with payload:", enrollmentPayload);
@@ -172,31 +143,11 @@ export default function BrowseQualifications() {
         full details and enrollment.
       </p>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
-        {hardcodedQualifications.map((q) => (
-          <QualificationCard
-            key={q.id}
-            qualification={q}
-            onSelect={() => setSelected(q)}
-          />
-        ))}
-      </div>
-
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {programmes.map((q) => (
           <QualificationCard
             key={q.id}
-            qualification={{
-              id: q.id,
-              title: q.name,
-              nqf: `NQF Level ${q.nqf_level}`,
-              image: q.image || "/dsk.jpg",
-              description: q.description || "",
-              credits: q.credits_total || 0,
-              duration: q.duration || "TBA",
-              facilitator: q.facilitator || "TBA",
-              applicationDeadline: q.application_deadline || "TBA",
-            }}
+            qualification={q}
             onSelect={() => setSelected(q)}
           />
         ))}
@@ -319,3 +270,4 @@ function QualificationModal({ qualification, onClose, onEnroll }) {
     </div>
   );
 }
+

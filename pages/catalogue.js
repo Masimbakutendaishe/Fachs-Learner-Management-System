@@ -1,10 +1,10 @@
 // pages/catalogue.js
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { createClient } from "../lib/supabase/client";
 
 export default function Catalogue() {
-  const supabase = createClientComponentClient();
+  const supabase = createClient();
   const [programmes, setProgrammes] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -53,3 +53,4 @@ export default function Catalogue() {
     </div>
   );
 }
+

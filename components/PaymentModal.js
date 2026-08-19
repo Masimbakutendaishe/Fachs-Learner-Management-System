@@ -1,10 +1,12 @@
 "use client";
 import { useState, useEffect } from "react";
-import { supabase } from "../lib/supabase";
-import { getCurrentUserId } from "./AuthModal";
-import { useRouter } from "next/navigation"; // import router
+import { createClient } from "../lib/supabase/client";
+import { useAuth } from "../pages/context/AuthContext";
+import { useRouter } from "next/router";
 
 export default function PaymentModal({ isOpen, onClose, programme }) {
+  const supabase = createClient();
+  const { user } = useAuth();
   const [method, setMethod] = useState("paypal");
   const [cardNumber, setCardNumber] = useState("");
   const [expiry, setExpiry] = useState("");
@@ -20,14 +22,12 @@ export default function PaymentModal({ isOpen, onClose, programme }) {
   }, [isOpen]);
 
   const handlePay = () => {
-    const userId = getCurrentUserId();
-    console.log("💳 [Step 1] User ID at Pay stage:", userId);
     setStep(2);
   };
 
   const handleConfirm = async () => {
     setLoading(true);
-    const userId = getCurrentUserId();
+    const userId = user?.id;
     console.log("🔑 [Step 2] User ID at Confirm OTP stage:", userId);
 
     if (!userId) {

@@ -1,66 +1,72 @@
-import { createContext, useContext, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/router";
+import { createContext, useContext, useEffect, useState } from "react";
+import { createClient } from "../../lib/supabase/client";
 
 const AuthContext = createContext();
 
-const INACTIVITY_LIMIT = 10 * 60 * 1000; // 10 minutes
-
 export function AuthProvider({ children }) {
-  const router = useRouter();
-  const timeoutRef = useRef(null);
+  const supabase = createClient();
+  const [user, setUser] = useState(null);
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [institution, setInstitution] = useState(null);
 
-  // Restore session on refresh
-  useEffect(() => {
-    const session = localStorage.getItem("session");
-    if (session) {
-      setIsAuthenticated(true);
-      resetTimer();
+  const loadProfile = async (authUser) => {
+    if (!authUser) {
+      setProfile(null);
+      setInstitution(null);
+      return;
     }
-  }, []);
+    const { data } = await supabase
+      .from("profiles")
+      .select("*, institutions(*)")
+      .eq("id", authUser.id)
+      .single();
+    setProfile(data || null);
+    setInstitution(data?.institutions || null);
+  };
 
-  // Activity listeners
   useEffect(() => {
-    const events = ["mousemove", "keydown", "click", "scroll"];
+    let mounted = true;
 
-    const handleActivity = () => resetTimer();
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!mounted) return;
+      setUser(session?.user ?? null);
+      loadProfile(session?.user ?? null).finally(() => setLoading(false));
+    });
 
-    events.forEach(event =>
-      window.addEventListener(event, handleActivity)
-    );
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      loadProfile(session?.user ?? null);
+    });
 
     return () => {
-      events.forEach(event =>
-        window.removeEventListener(event, handleActivity)
-      );
+      mounted = false;
+      subscription.unsubscribe();
     };
   }, []);
 
-  const resetTimer = () => {
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
-
-    timeoutRef.current = setTimeout(() => {
-      logout(true);
-    }, INACTIVITY_LIMIT);
-  };
-
-  const login = (userData) => {
-    localStorage.setItem("session", JSON.stringify(userData));
-    setIsAuthenticated(true);
-    resetTimer();
-  };
-
-  const logout = (inactive = false) => {
-    localStorage.removeItem("session");
-    setIsAuthenticated(false);
-    clearTimeout(timeoutRef.current);
-
-    router.push(inactive ? "/login?reason=inactive" : "/login");
+  const signOut = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    setProfile(null);
+    window.location.href = "/";
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, login, logout }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        profile,
+        institution,
+        role: profile?.role ?? null,
+        isAuthenticated: !!user,
+        loading,
+        signOut,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

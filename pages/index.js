@@ -1,16 +1,11 @@
-<<<<<<< HEAD
 import { useState, useEffect } from "react";
-=======
-// pages/index.js
-import { useState } from "react";
->>>>>>> 421e4ada339fa417b8f051cfa442859455658a42
 import Head from "next/head";
 import Button from "../components/Button";
 import AuthModal from "../components/AuthModal";
 import ChatModal from "../components/ChatModal";
 import CountUp from "react-countup";
 import VisibilitySensor from "react-visibility-sensor";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { createClient } from "../lib/supabase/client";
 
 export default function Home() {
   const [isOpen, setIsOpen] = useState(false);
@@ -18,7 +13,7 @@ export default function Home() {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [sessionUser, setSessionUser] = useState(null);
 
-  const supabase = createClientComponentClient();
+  const supabase = createClient();
 
   const openModal = (selectedMode) => {
     setMode(selectedMode);
@@ -57,10 +52,7 @@ export default function Home() {
         <meta property="og:image" content="/collegelogo.png" />
         <meta property="og:type" content="website" />
       </Head>
-<<<<<<< HEAD
 
-=======
->>>>>>> 421e4ada339fa417b8f051cfa442859455658a42
       {/* Fachs Logo */}
       <div className="mb-2">
          <img
@@ -230,3 +222,4 @@ export default function Home() {
     </div>
   );
 }
+

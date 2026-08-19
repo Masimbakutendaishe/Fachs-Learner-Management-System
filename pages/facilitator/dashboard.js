@@ -2,11 +2,12 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { PlusCircle } from "lucide-react";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
-
+import { createClient } from "../../lib/supabase/client";
+import { useFeatures } from "../../lib/features/useFeatures";
 export default function FacilitatorDashboard() {
-  const supabase = createClientComponentClient();
-
+  const supabase = createClient();
+  const router = useRouter();
+  const features = useFeatures();
   const [facilitations, setFacilitations] = useState([]);
   const [user, setUser] = useState(null);
 
@@ -15,7 +16,7 @@ export default function FacilitatorDashboard() {
     const fetchUserAndFacilitations = async () => {
       const { data: { user: sessionUser }, error: userErr } = await supabase.auth.getUser();
       if (userErr || !sessionUser) {
-        console.error("Error fetching authenticated user:", userErr);
+        router.push("/auth/signin");
         return;
       }
 
@@ -139,15 +140,24 @@ export default function FacilitatorDashboard() {
         <section className="flex flex-col">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-2xl font-bold text-white">
-              Qualifications Facilitating
+              {features.hasTimetable ? "My Classes" : "Qualifications Facilitating"}
             </h2>
-            <button
-              onClick={handleAddQualification}
-              className="flex items-center gap-2 text-blue-400 font-bold hover:underline"
-            >
-              <PlusCircle className="w-5 h-5" /> Add Qualification
-            </button>
+            {features.hasQctoFields && (
+              <button
+                onClick={handleAddQualification}
+                className="flex items-center gap-2 text-blue-400 font-bold hover:underline"
+              >
+                <PlusCircle className="w-5 h-5" /> Add Qualification
+              </button>
+            )}
           </div>
+
+          {features.hasTimetable && (
+            <div className="mb-4 p-4 rounded-xl bg-gray-900/40 border border-gray-700 flex items-center gap-3 text-gray-200">
+              <Calendar className="w-5 h-5 text-blue-400" />
+              <span className="text-sm">Timetable and class roster management is coming here for school accounts.</span>
+            </div>
+          )}
 
           {facilitations.length === 0 ? (
             <p className="text-gray-400 font-medium">No qualifications assigned yet.</p>
@@ -208,3 +218,4 @@ export default function FacilitatorDashboard() {
     </div>
   );
 }
+

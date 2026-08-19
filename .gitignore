@@ -1,1 +1,6 @@
 node_modules
+.env.local
+.env*.local
+.next/
+node_modules/
+stripe.exe
