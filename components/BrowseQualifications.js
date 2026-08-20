@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import AuthModal from "./AuthModal";
+import Portal from "./Portal";
 import { createClient } from "../lib/supabase/client";
 import { useAuth } from "../pages/context/AuthContext";
 
@@ -23,16 +24,15 @@ function normalizeProgramme(q) {
 
 export default function BrowseQualifications() {
   const [selected, setSelected] = useState(null);
-  const [paymentOpen, setPaymentOpen] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState("signup");
   const [programmes, setProgrammes] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const supabase = createClient();
   const router = useRouter();
   const { user: sessionUser, loading: sessionLoading } = useAuth();
 
-  // Fetch programmes
   useEffect(() => {
     const fetchProgrammes = async () => {
       const { data, error } = await supabase
@@ -42,25 +42,17 @@ export default function BrowseQualifications() {
 
       if (error) console.error("Error fetching programmes:", error);
       else setProgrammes((data || []).map(normalizeProgramme));
+      setLoading(false);
     };
     fetchProgrammes();
   }, []);
 
-  // Open qualification via query param
   useEffect(() => {
     if (router.query.selected) {
       const qual = programmes.find((q) => q.id === Number(router.query.selected));
       if (qual) setSelected(qual);
     }
   }, [router.query.selected, programmes]);
-
-  // Lock scroll when modal open
-  useEffect(() => {
-    document.body.style.overflow = selected || authOpen ? "hidden" : "auto";
-    return () => {
-      document.body.style.overflow = "auto";
-    };
-  }, [selected, authOpen]);
 
   const handleEnrollClick = async () => {
     if (sessionLoading) return;
@@ -73,7 +65,6 @@ export default function BrowseQualifications() {
 
     if (!selected) return;
 
-    // Find an existing enrollment for this programme, or create one first
     const { data: existing } = await supabase
       .from("enrollments")
       .select("id, payment_status")
@@ -127,24 +118,33 @@ export default function BrowseQualifications() {
   };
 
   return (
-    <div className="text-white px-4 py-8">
-      <h2 className="text-3xl font-bold mb-4">Browse Qualifications</h2>
-      <p className="text-lg mb-8">
-        Explore our accredited qualifications. Hover for quick info or click for
-        full details and enrollment.
+    <div className="animate-fade-up">
+      <p className="text-xs font-mono text-[var(--text-muted)] mb-1">CATALOGUE</p>
+      <h1 className="font-display text-3xl font-semibold mb-2" style={{ color: "var(--text)" }}>
+        Browse Qualifications
+      </h1>
+      <p className="text-[var(--text-muted)] mb-8">
+        Accredited programmes across our institutions. Select one for full details.
       </p>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        {programmes.map((q) => (
-          <QualificationCard
-            key={q.id}
-            qualification={q}
-            onSelect={() => setSelected(q)}
-          />
-        ))}
-      </div>
+      {loading ? (
+        <p className="text-sm text-[var(--text-muted)] font-mono">Loading catalogue...</p>
+      ) : programmes.length === 0 ? (
+        <div className="paper p-8 text-center text-gray-500">No qualifications available yet.</div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {programmes.map((q, i) => (
+            <QualificationCard
+              key={q.id}
+              qualification={q}
+              onSelect={() => setSelected(q)}
+              delay={Math.min(i + 1, 4)}
+            />
+          ))}
+        </div>
+      )}
 
-      {selected && !paymentOpen && (
+      {selected && (
         <QualificationModal
           qualification={selected}
           onClose={() => setSelected(null)}
@@ -165,31 +165,32 @@ export default function BrowseQualifications() {
   );
 }
 
-// -------------------------
-// COMPONENTS
-// -------------------------
-
-function QualificationCard({ qualification, onSelect }) {
+function QualificationCard({ qualification, onSelect, delay }) {
   return (
     <div
       onClick={onSelect}
-      className="relative group bg-white bg-opacity-10 backdrop-blur-md rounded-2xl shadow-xl p-6 transform transition duration-500 hover:scale-105 hover:shadow-2xl cursor-pointer border border-white border-opacity-20"
+      className={`paper overflow-hidden card-lift cursor-pointer animate-fade-up stagger-${delay}`}
     >
       <img
         src={qualification.image}
         alt={qualification.title}
-        className="w-full h-40 object-cover rounded-lg mb-4"
+        className="w-full h-36 object-cover"
       />
-      <h3 className="text-xl font-bold mb-2">
-        {qualification.title} ({qualification.nqf})
-      </h3>
-      <p className="line-clamp-2">{qualification.description}</p>
-      <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition flex flex-col justify-center items-center p-4 text-sm rounded-2xl">
-        <p>Credits: {qualification.credits}</p>
-        <p>Duration: {qualification.duration}</p>
-        <p>Deadline: {qualification.applicationDeadline}</p>
-        <p>Facilitator: {qualification.facilitator}</p>
-        <p className="mt-2 text-xs">(Click for full details)</p>
+      <div className="p-5">
+        <span
+          className="inline-block text-xs font-mono px-2 py-1 rounded-full mb-2"
+          style={{ background: "var(--seal-gold-soft)", color: "var(--seal-gold)" }}
+        >
+          {qualification.nqf}
+        </span>
+        <h3 className="font-display font-semibold text-base mb-1.5" style={{ color: "var(--text)" }}>
+          {qualification.title}
+        </h3>
+        <p className="text-sm text-gray-500 line-clamp-2">{qualification.description}</p>
+        <div className="flex items-center justify-between mt-4 text-xs text-gray-400 font-mono">
+          <span>{qualification.credits} credits</span>
+          <span>{qualification.duration}</span>
+        </div>
       </div>
     </div>
   );
@@ -197,58 +198,66 @@ function QualificationCard({ qualification, onSelect }) {
 
 function QualificationModal({ qualification, onClose, onEnroll }) {
   return (
-    <div
-      id="modalOverlay"
-      onClick={(e) => e.target.id === "modalOverlay" && onClose()}
-      className="fixed inset-0 bg-black bg-opacity-80 backdrop-blur-md flex justify-center items-start p-4 overflow-auto"
-    >
-      <div className="mt-12 bg-gradient-to-br from-white/90 to-gray-100/90 text-gray-900 rounded-3xl max-w-4xl w-full p-8 shadow-2xl relative overflow-y-auto max-h-[90vh] border border-gray-200 border-opacity-30 backdrop-blur-sm">
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 text-gray-800 bg-gray-300 px-4 py-2 rounded-full hover:bg-gray-400 transition shadow-lg"
+    <Portal>
+      <div onClick={onClose} className="fixed inset-0 bg-black/50 backdrop-blur-sm z-30" />
+      <div className="fixed inset-0 z-40 flex items-center justify-center p-4">
+        <div
+          className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl shadow-2xl p-8"
+          style={{ background: "var(--paper)" }}
         >
-          ✕
-        </button>
-        <h3 className="text-3xl font-extrabold mb-4 text-center">
-          {qualification.title}
-        </h3>
-        <img
-          src={qualification.image}
-          alt={qualification.title}
-          className="w-full h-64 object-cover rounded-xl mb-6 shadow-lg border border-gray-300"
-        />
-        <table className="w-full text-left mb-6 border-collapse">
-          <tbody>
-            <tr className="border-b border-gray-300">
-              <th className="py-2 px-4 font-medium">NQF Level</th>
-              <td className="py-2 px-4">{qualification.nqf}</td>
-            </tr>
-            <tr className="border-b border-gray-300 bg-gray-50/50">
-              <th className="py-2 px-4 font-medium">Credits</th>
-              <td className="py-2 px-4">{qualification.credits}</td>
-            </tr>
-            <tr className="border-b border-gray-300">
-              <th className="py-2 px-4 font-medium">Duration</th>
-              <td className="py-2 px-4">{qualification.duration}</td>
-            </tr>
-            <tr className="border-b border-gray-300 bg-gray-50/50">
-              <th className="py-2 px-4 font-medium">Deadline</th>
-              <td className="py-2 px-4">{qualification.applicationDeadline}</td>
-            </tr>
-            <tr>
-              <th className="py-2 px-4 font-medium">Facilitator</th>
-              <td className="py-2 px-4">{qualification.facilitator}</td>
-            </tr>
-          </tbody>
-        </table>
-        <button
-          onClick={onEnroll}
-          className="mt-8 w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-2xl hover:from-blue-700 hover:to-indigo-700 transition shadow-xl"
-        >
-          Enroll Now
-        </button>
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 transition-colors"
+          >
+            ✕
+          </button>
+
+          <span
+            className="inline-block text-xs font-mono px-2 py-1 rounded-full mb-3"
+            style={{ background: "var(--seal-gold-soft)", color: "var(--seal-gold)" }}
+          >
+            {qualification.nqf}
+          </span>
+          <h2 className="font-display text-2xl font-semibold mb-4" style={{ color: "var(--text)" }}>
+            {qualification.title}
+          </h2>
+
+          <img
+            src={qualification.image}
+            alt={qualification.title}
+            className="w-full h-56 object-cover rounded-xl mb-6"
+          />
+
+          <p className="text-sm text-gray-600 mb-6">{qualification.description}</p>
+
+          <div className="grid grid-cols-2 gap-4 mb-6 text-sm">
+            <div className="p-3 rounded-xl" style={{ background: "var(--paper-muted)" }}>
+              <p className="text-xs text-gray-400 font-mono mb-1">CREDITS</p>
+              <p className="font-medium" style={{ color: "var(--text)" }}>{qualification.credits}</p>
+            </div>
+            <div className="p-3 rounded-xl" style={{ background: "var(--paper-muted)" }}>
+              <p className="text-xs text-gray-400 font-mono mb-1">DURATION</p>
+              <p className="font-medium" style={{ color: "var(--text)" }}>{qualification.duration}</p>
+            </div>
+            <div className="p-3 rounded-xl" style={{ background: "var(--paper-muted)" }}>
+              <p className="text-xs text-gray-400 font-mono mb-1">DEADLINE</p>
+              <p className="font-medium" style={{ color: "var(--text)" }}>{qualification.applicationDeadline}</p>
+            </div>
+            <div className="p-3 rounded-xl" style={{ background: "var(--paper-muted)" }}>
+              <p className="text-xs text-gray-400 font-mono mb-1">FACILITATOR</p>
+              <p className="font-medium" style={{ color: "var(--text)" }}>{qualification.facilitator}</p>
+            </div>
+          </div>
+
+          <button
+            onClick={onEnroll}
+            className="w-full py-3 rounded-xl text-white font-medium transition-all hover:brightness-110"
+            style={{ background: "var(--brand-color)" }}
+          >
+            Enroll Now
+          </button>
+        </div>
       </div>
-    </div>
+    </Portal>
   );
 }
-
