@@ -1,189 +1,201 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { createClient } from "../lib/supabase/client";
+import { useAuth } from "./context/AuthContext";
 
-/* ---------- Dummy Learner Data ---------- */
-const dummySubmissions = [
-  {
-    id: 1,
-    name: "Thabo Mokoena",
-    submissions: [
-      {
-        unit: "Technical Support Level 1",
-        type: "Learner Workbook",
-        submissionDate: "2025-09-01",
-        status: "Submitted",
-        fileName: "Workbook_TS1_Thabo.pdf",
-        questions: [
-          { q: "Question 1: Define a computer system", marks: null },
-          { q: "Question 2: Explain hardware vs software", marks: null },
-        ],
-      },
-      {
-        unit: "Technical Support Level 1",
-        type: "Summative Assessment",
-        submissionDate: "2025-09-02",
-        status: "Submitted",
-        fileName: "Summative_TS1_Thabo.pdf",
-        questions: [
-          { q: "Q1: Define computer architecture", marks: null },
-          { q: "Q2: Explain storage devices", marks: null },
-          { q: "Q3: Describe networking basics", marks: null },
-        ],
-      },
-    ],
-  },
-  {
-    id: 2,
-    name: "Lerato Khumalo",
-    submissions: [
-      {
-        unit: "Technical Support Level 2",
-        type: "Practical Evidence",
-        submissionDate: "2025-09-03",
-        status: "Submitted",
-        fileName: "Practical_TS2_Lerato.pdf",
-        questions: [
-          { q: "Practical 1: Install OS", marks: null },
-          { q: "Practical 2: Configure network", marks: null },
-          { q: "Practical 3: Backup data", marks: null },
-        ],
-      },
-      {
-        unit: "Technical Support Level 2",
-        type: "Summative Assessment",
-        submissionDate: "2025-09-04",
-        status: "Not Submitted",
-        questions: [],
-      },
-    ],
-  },
-  {
-    id: 3,
-    name: "Sipho Dlamini",
-    submissions: [
-      {
-        unit: "Technical Support Level 1",
-        type: "Learner Workbook",
-        submissionDate: "2025-09-01",
-        status: "Submitted",
-        fileName: "Workbook_TS1_Sipho.pdf",
-        questions: [
-          { q: "Q1: Identify computer parts", marks: null },
-          { q: "Q2: Explain OS functions", marks: null },
-        ],
-      },
-    ],
-  },
-];
+const ACTIVITY_LABELS = {
+  workbook: "Learner Workbook",
+  knowledge: "Knowledge Module",
+  summative: "Summative Assessment",
+  practical: "Practical Evidence",
+};
 
-/* ---------- Grade Learner Submissions Page ---------- */
 export default function GradeSubmissionsPage() {
-  const [learners, setLearners] = useState(dummySubmissions);
+  const supabase = createClient();
+  const { profile } = useAuth();
+  const [submissions, setSubmissions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState("submitted");
+  const [drafts, setDrafts] = useState({});
+  const [savingId, setSavingId] = useState(null);
+  const [fileUrls, setFileUrls] = useState({});
 
-  const handleMark = (learnerId, submissionIndex, questionIndex, mark) => {
-    setLearners((prev) =>
-      prev.map((l) => {
-        if (l.id === learnerId) {
-          const newSubs = [...l.submissions];
-          newSubs[submissionIndex].questions[questionIndex].marks = mark;
-          return { ...l, submissions: newSubs };
-        }
-        return l;
-      })
-    );
+  useEffect(() => {
+    fetchSubmissions();
+  }, [filter]);
+
+  const fetchSubmissions = async () => {
+    setLoading(true);
+    let query = supabase
+      .from("submissions")
+      .select(`
+        id, activity_type, file_url, answers, status, grade, feedback, submitted_at,
+        profiles ( id, first_name, surname ),
+        programmes ( id, name ),
+        unit_weeks ( unit_standard_title )
+      `)
+      .order("submitted_at", { ascending: false });
+
+    if (filter !== "all") query = query.eq("status", filter);
+
+    const { data, error } = await query;
+    if (error) console.error(error);
+    setSubmissions(data || []);
+    setLoading(false);
   };
 
-  const handleSave = () => {
-    alert("Grades saved (dummy)!");
-    console.log("Saved grades:", learners);
+  const getFileUrl = async (submissionId, path) => {
+    if (fileUrls[submissionId]) return fileUrls[submissionId];
+    const { data, error } = await supabase.storage.from("submissions").createSignedUrl(path, 3600);
+    if (error) {
+      alert("Could not load file: " + error.message);
+      return null;
+    }
+    setFileUrls((prev) => ({ ...prev, [submissionId]: data.signedUrl }));
+    return data.signedUrl;
+  };
+
+  const handleSave = async (submission) => {
+    const draft = drafts[submission.id] || {};
+    setSavingId(submission.id);
+    try {
+      const { error } = await supabase
+        .from("submissions")
+        .update({
+          grade: draft.grade ?? submission.grade,
+          feedback: draft.feedback ?? submission.feedback,
+          status: "graded",
+          graded_at: new Date().toISOString(),
+          graded_by: profile?.id,
+        })
+        .eq("id", submission.id);
+      if (error) throw error;
+      fetchSubmissions();
+    } catch (err) {
+      alert("Could not save grade: " + err.message);
+    } finally {
+      setSavingId(null);
+    }
+  };
+
+  const updateDraft = (id, field, value) => {
+    setDrafts((prev) => ({ ...prev, [id]: { ...prev[id], [field]: value } }));
   };
 
   return (
-    <div className="p-6 bg-gray-100 min-h-screen">
-      <h1 className="text-3xl font-bold mb-6 text-gray-900">
-        Grade Learner Submissions
+    <div className="animate-fade-up">
+      <p className="text-xs font-mono text-[var(--text-muted)] mb-1">FACILITATOR</p>
+      <h1 className="font-display text-3xl font-semibold mb-2" style={{ color: "var(--text)" }}>
+        Grade Submissions
       </h1>
+      <p className="text-[var(--text-muted)] mb-6">Review learner work and record marks and feedback.</p>
 
-      {learners.map((learner) => (
-        <div
-          key={learner.id}
-          className="mb-6 bg-white shadow rounded-lg p-4"
-        >
-          <h2 className="text-xl font-bold text-gray-800 mb-3">{learner.name}</h2>
-          {learner.submissions.map((sub, sIndex) => (
-            <div
-              key={sIndex}
-              className="mb-4 p-4 border border-gray-300 rounded-lg bg-gray-50"
-            >
-              <div className="flex justify-between items-center mb-2">
-                <p className="font-semibold text-gray-800">
-                  {sub.unit} — {sub.type}
-                </p>
-                <span className="text-gray-500">{sub.submissionDate}</span>
-              </div>
-              <p className="text-gray-700 mb-1">Status: {sub.status}</p>
-              {sub.fileName && sub.status === "Submitted" && (
-                <p className="text-gray-600 mb-2">
-                  File:{" "}
-                  <a
-                    href="#"
-                    className="text-blue-600 hover:underline"
-                  >
-                    {sub.fileName}
-                  </a>
-                </p>
-              )}
-
-              {sub.questions.length > 0 ? (
-                <table className="w-full border border-gray-300 rounded-lg overflow-hidden mb-2">
-                  <thead className="bg-gray-900 text-white">
-                    <tr>
-                      <th className="px-4 py-2 text-left">Question</th>
-                      <th className="px-4 py-2 text-left">Marks</th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white">
-                    {sub.questions.map((q, qIndex) => (
-                      <tr
-                        key={qIndex}
-                        className="border-b border-gray-200 hover:bg-gray-100"
-                      >
-                        <td className="px-4 py-2 text-gray-900">{q.q}</td>
-                        <td className="px-4 py-2">
-                          {sub.status === "Submitted" ? (
-                            <input
-                              type="number"
-                              placeholder="Enter marks"
-                              className="w-24 p-1 border rounded text-gray-900"
-                              value={q.marks || ""}
-                              onChange={(e) =>
-                                handleMark(learner.id, sIndex, qIndex, e.target.value)
-                              }
-                            />
-                          ) : (
-                            <span className="text-gray-500">-</span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              ) : (
-                <p className="text-gray-500">No questions submitted.</p>
-              )}
-            </div>
-          ))}
-        </div>
-      ))}
-
-      <div className="mt-6">
-        <button
-          onClick={handleSave}
-          className="px-6 py-3 bg-green-600 text-white rounded hover:bg-green-700"
-        >
-          Save All Grades
-        </button>
+      <div className="flex gap-2 mb-6">
+        {[
+          { key: "submitted", label: "Awaiting Grading" },
+          { key: "graded", label: "Graded" },
+          { key: "all", label: "All" },
+        ].map((f) => (
+          <button
+            key={f.key}
+            onClick={() => setFilter(f.key)}
+            className="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+            style={
+              filter === f.key
+                ? { background: "var(--brand-color)", color: "white" }
+                : { background: "var(--paper)", color: "var(--text-muted)", border: "1px solid var(--border-soft)" }
+            }
+          >
+            {f.label}
+          </button>
+        ))}
       </div>
+
+      {loading ? (
+        <p className="text-sm font-mono text-[var(--text-muted)]">Loading submissions...</p>
+      ) : submissions.length === 0 ? (
+        <div className="paper p-8 text-center text-gray-500 text-sm">
+          No submissions {filter === "submitted" ? "awaiting grading" : filter === "graded" ? "graded yet" : "yet"}.
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {submissions.map((sub) => {
+            const draft = drafts[sub.id] || {};
+            const learnerName = sub.profiles ? `${sub.profiles.first_name || ""} ${sub.profiles.surname || ""}`.trim() : "Unknown learner";
+            return (
+              <div key={sub.id} className="paper p-5">
+                <div className="flex items-start justify-between gap-3 mb-3 flex-wrap">
+                  <div>
+                    <h3 className="font-display font-semibold" style={{ color: "var(--text)" }}>{learnerName}</h3>
+                    <p className="text-xs text-gray-400 font-mono mt-0.5">
+                      {sub.programmes?.name} {sub.unit_weeks?.unit_standard_title ? `· ${sub.unit_weeks.unit_standard_title}` : ""}
+                    </p>
+                    <p className="text-xs text-gray-400 font-mono">
+                      {ACTIVITY_LABELS[sub.activity_type] || sub.activity_type} · Submitted {new Date(sub.submitted_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <span
+                    className="text-xs font-medium px-2.5 py-1 rounded-full"
+                    style={
+                      sub.status === "graded"
+                        ? { background: "#ECFDF5", color: "#047857" }
+                        : { background: "var(--seal-gold-soft)", color: "var(--seal-gold)" }
+                    }
+                  >
+                    {sub.status === "graded" ? "Graded" : "Awaiting grading"}
+                  </span>
+                </div>
+
+                {sub.file_url ? (
+                  <button
+                    onClick={async () => {
+                      const url = await getFileUrl(sub.id, sub.file_url);
+                      if (url) window.open(url, "_blank");
+                    }}
+                    className="text-sm font-medium mb-3 inline-block"
+                    style={{ color: "var(--brand-color)" }}
+                  >
+                    View uploaded file
+                  </button>
+                ) : sub.answers ? (
+                  <div className="p-4 rounded-xl mb-3 text-sm text-gray-600 space-y-2" style={{ background: "var(--paper-muted)" }}>
+                    {Object.entries(sub.answers).map(([q, a]) => (
+                      <p key={q}><span className="font-medium text-gray-800">Q{Number(q) + 1}:</span> {a}</p>
+                    ))}
+                  </div>
+                ) : null}
+
+                <div className="grid grid-cols-1 md:grid-cols-[100px_1fr_auto] gap-3 items-start">
+                  <input
+                    type="number"
+                    placeholder="Grade"
+                    defaultValue={sub.grade ?? ""}
+                    onChange={(e) => updateDraft(sub.id, "grade", e.target.value)}
+                    className="px-3 py-2 rounded-lg border text-sm"
+                    style={{ borderColor: "var(--border-soft)" }}
+                  />
+                  <textarea
+                    placeholder="Feedback for the learner..."
+                    defaultValue={sub.feedback ?? ""}
+                    onChange={(e) => updateDraft(sub.id, "feedback", e.target.value)}
+                    rows={2}
+                    className="px-3 py-2 rounded-lg border text-sm resize-none"
+                    style={{ borderColor: "var(--border-soft)" }}
+                  />
+                  <button
+                    onClick={() => handleSave(sub)}
+                    disabled={savingId === sub.id}
+                    className="px-4 py-2 rounded-lg text-sm font-medium text-white transition-all hover:brightness-110 disabled:opacity-50"
+                    style={{ background: "var(--brand-color)" }}
+                  >
+                    {savingId === sub.id ? "Saving..." : "Save Grade"}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

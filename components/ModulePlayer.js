@@ -86,13 +86,46 @@ const TeamsSession = ({ url, startDate }) => {
   );
 };
 
-const PracticalEvidenceUpload = ({ title, questions, onComplete }) => {
+const PracticalEvidenceUpload = ({ title, questions, onComplete, enrollment, unitWeek }) => {
+  const supabase = createClient();
   const [step, setStep] = useState(0);
   const [uploads, setUploads] = useState({});
+  const [submitting, setSubmitting] = useState(false);
+
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) setUploads((prev) => ({ ...prev, [step]: file }));
   };
+
+  const handleSubmitEvidence = async () => {
+    setSubmitting(true);
+    try {
+      const file = uploads[0];
+      let fileUrl = null;
+      if (file) {
+        const path = `${enrollment.id}/${Date.now()}_${file.name}`;
+        const { error: uploadError } = await supabase.storage.from("submissions").upload(path, file);
+        if (uploadError) throw uploadError;
+        fileUrl = path;
+      }
+      const { error } = await supabase.from("submissions").insert({
+        enrollment_id: enrollment.id,
+        user_id: enrollment.user_id,
+        programme_id: enrollment.programme_id,
+        institution_id: enrollment.institution_id,
+        unit_week_id: unitWeek?.id,
+        activity_type: "practical",
+        file_url: fileUrl,
+      });
+      if (error) throw error;
+      onComplete?.(uploads);
+    } catch (err) {
+      alert("Could not save submission: " + err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <div className="paper p-6 mb-4">
       <h2 className="font-display text-xl font-semibold mb-4" style={{ color: "var(--text)" }}>{title}</h2>
@@ -108,7 +141,7 @@ const PracticalEvidenceUpload = ({ title, questions, onComplete }) => {
               {step < questions.length - 1 ? (
                 <button onClick={() => setStep((s) => s + 1)} className="px-4 py-2 rounded-lg text-sm text-white font-medium" style={{ background: "var(--brand-color)" }}>Next</button>
               ) : (
-                <button onClick={() => onComplete?.(uploads)} className="px-4 py-2 rounded-lg text-sm text-white font-medium bg-emerald-600 hover:bg-emerald-500">Submit Evidence</button>
+                <button onClick={handleSubmitEvidence} disabled={submitting} className="px-4 py-2 rounded-lg text-sm text-white font-medium bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50">{submitting ? "Submitting..." : "Submit Evidence"}</button>
               )}
             </div>
           </div>
@@ -119,9 +152,33 @@ const PracticalEvidenceUpload = ({ title, questions, onComplete }) => {
   );
 };
 
-const LearningResource = ({ title, url, questions, onComplete }) => {
+const LearningResource = ({ title, url, questions, onComplete, activityType, enrollment, unitWeek }) => {
+  const supabase = createClient();
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState({});
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmitAnswers = async () => {
+    setSubmitting(true);
+    try {
+      const { error } = await supabase.from("submissions").insert({
+        enrollment_id: enrollment.id,
+        user_id: enrollment.user_id,
+        programme_id: enrollment.programme_id,
+        institution_id: enrollment.institution_id,
+        unit_week_id: unitWeek?.id,
+        activity_type: activityType,
+        answers,
+      });
+      if (error) throw error;
+      onComplete?.();
+    } catch (err) {
+      alert("Could not save submission: " + err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <div className="paper p-6 mb-4">
       <h2 className="font-display text-xl font-semibold mb-4" style={{ color: "var(--text)" }}>{title}</h2>
@@ -141,7 +198,7 @@ const LearningResource = ({ title, url, questions, onComplete }) => {
               {step < questions.length - 1 ? (
                 <button onClick={() => setStep((s) => s + 1)} className="px-4 py-2 rounded-lg text-sm text-white font-medium" style={{ background: "var(--brand-color)" }}>Next</button>
               ) : (
-                <button onClick={() => onComplete?.()} className="px-4 py-2 rounded-lg text-sm text-white font-medium bg-emerald-600 hover:bg-emerald-500">Submit</button>
+                <button onClick={handleSubmitAnswers} disabled={submitting} className="px-4 py-2 rounded-lg text-sm text-white font-medium bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50">{submitting ? "Submitting..." : "Submit"}</button>
               )}
             </div>
           </div>
@@ -205,7 +262,7 @@ export default function ModulePlayer({ enrollmentId }) {
         }
         const { data: enrollmentData, error: enrollErr } = await supabase
           .from("enrollments")
-          .select("id, progress, credits_earned, credits_total, programme_id, user_id, programmes ( id, name )")
+          .select("id, progress, credits_earned, credits_total, programme_id, user_id, institution_id, programmes ( id, name )")
           .eq("id", enrollmentId)
           .single();
         if (enrollErr || !enrollmentData || enrollmentData.user_id !== userId) {
@@ -319,11 +376,14 @@ export default function ModulePlayer({ enrollmentId }) {
               title={activities.find((a) => a.key === currentActivity)?.label}
               url={unitWeek[`${currentActivity === "workbook" ? "learner_workbook" : currentActivity === "knowledge" ? "knowledge_module" : "summative_assessment"}_url`]}
               questions={["1) Describe the key points.", "2) How will you apply this in practice?"]}
+              activityType={currentActivity}
+              enrollment={enrollment}
+              unitWeek={unitWeek}
               onComplete={() => handleComplete(currentActivity)}
             />
           )}
           {currentActivity === "practical" && (
-            <PracticalEvidenceUpload title="Practical Evidence Upload" questions={["Upload evidence for Question 1", "Upload evidence for Question 2"]} onComplete={() => handleComplete("practical")} />
+            <PracticalEvidenceUpload title="Practical Evidence Upload" questions={["Upload evidence for Question 1", "Upload evidence for Question 2"]} enrollment={enrollment} unitWeek={unitWeek} onComplete={() => handleComplete("practical")} />
           )}
           {currentActivity === "ai" && (
             <div className="paper p-6">

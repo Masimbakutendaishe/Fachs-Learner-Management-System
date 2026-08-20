@@ -1,7 +1,9 @@
 {
   "/_app": "pages/_app.js",
-  "/_document": "pages/_document.js",
   "/_error": "pages/_error.js",
+  "/_document": "pages/_document.js",
+  "/module-player/[enrollmentId]": "pages/module-player/[enrollmentId].js",
+  "/qualifications": "pages/qualifications.js",
   "/dashboard": "pages/dashboard.js",
-  "/module-player/[enrollmentId]": "pages/module-player/[enrollmentId].js"
+  "/": "pages/index.js"
 }

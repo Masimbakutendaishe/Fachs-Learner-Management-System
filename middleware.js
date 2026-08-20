@@ -15,6 +15,9 @@ const PROTECTED_PREFIXES = [
 const ROLE_PREFIXES = {
   "/facilitator": ["facilitator"],
   "/admin": ["institution_admin", "superadmin"],
+  "/gradesubmissions": ["facilitator", "institution_admin", "superadmin"],
+  "/studentsubmissionspage": ["facilitator", "institution_admin", "superadmin"],
+  "/previousuploads": ["facilitator", "institution_admin", "superadmin"],
 };
 
 export async function middleware(request) {
