@@ -2,8 +2,7 @@
   "/_app": "pages/_app.js",
   "/_error": "pages/_error.js",
   "/_document": "pages/_document.js",
-  "/module-player/[enrollmentId]": "pages/module-player/[enrollmentId].js",
   "/qualifications": "pages/qualifications.js",
-  "/dashboard": "pages/dashboard.js",
-  "/": "pages/index.js"
+  "/api/superadmin/list-users": "pages/api/superadmin/list-users.js",
+  "/superadmin": "pages/superadmin.js"
 }

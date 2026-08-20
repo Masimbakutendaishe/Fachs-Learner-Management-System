@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
+import Link from "next/link";
 import { PlusCircle, Calendar } from "lucide-react";
 import { createClient } from "../../lib/supabase/client";
 import { useFeatures } from "../../lib/features/useFeatures";
@@ -92,15 +93,20 @@ export default function FacilitatorDashboard() {
             <h2 className="font-display text-lg font-semibold" style={{ color: "var(--text)" }}>
               {features.hasTimetable ? "My Classes" : "Qualifications Facilitating"}
             </h2>
-            {features.hasQctoFields && (
-              <button
-                onClick={() => setAddModalOpen(true)}
-                className="flex items-center gap-1.5 text-sm font-medium transition-opacity hover:opacity-80"
-                style={{ color: "var(--brand-color)" }}
-              >
-                <PlusCircle className="w-4 h-4" /> Add Qualification
-              </button>
-            )}
+            <div className="flex items-center gap-4">
+              <Link href="/facilitator/manage-content" className="text-sm font-medium" style={{ color: "var(--brand-color)" }}>
+                Manage Weekly Content
+              </Link>
+              {features.hasQctoFields && (
+                <button
+                  onClick={() => setAddModalOpen(true)}
+                  className="flex items-center gap-1.5 text-sm font-medium transition-opacity hover:opacity-80"
+                  style={{ color: "var(--brand-color)" }}
+                >
+                  <PlusCircle className="w-4 h-4" /> Add Qualification
+                </button>
+              )}
+            </div>
           </div>
 
           {features.hasTimetable && (

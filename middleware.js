@@ -5,6 +5,7 @@ const PROTECTED_PREFIXES = [
   "/dashboard",
   "/facilitator",
   "/admin",
+  "/superadmin",
   "/module-player",
   "/gradesubmissions",
   "/studentsubmissionspage",
@@ -15,6 +16,7 @@ const PROTECTED_PREFIXES = [
 const ROLE_PREFIXES = {
   "/facilitator": ["facilitator"],
   "/admin": ["institution_admin", "superadmin"],
+  "/superadmin": ["superadmin"],
   "/gradesubmissions": ["facilitator", "institution_admin", "superadmin"],
   "/studentsubmissionspage": ["facilitator", "institution_admin", "superadmin"],
   "/previousuploads": ["facilitator", "institution_admin", "superadmin"],
@@ -58,9 +60,13 @@ export async function middleware(request) {
   if (isProtected && user) {
     const { data: profile } = await supabase
       .from("profiles")
-      .select("role, institutions(status)")
+      .select("role, is_active, institutions(status)")
       .eq("id", user.id)
       .single();
+
+    if (profile?.is_active === false) {
+      return NextResponse.redirect(new URL("/account-suspended", request.url));
+    }
 
     if (profile?.institutions?.status === "suspended" && profile.role !== "superadmin") {
       return NextResponse.redirect(new URL("/account-suspended", request.url));
