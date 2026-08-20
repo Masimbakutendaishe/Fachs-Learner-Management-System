@@ -1,17 +1,22 @@
 "use client";
 import { useState, useEffect } from "react";
+import { useRouter } from "next/router";
 import Link from "next/link";
-import { PlusCircle } from "lucide-react";
+import { PlusCircle, Calendar } from "lucide-react";
 import { createClient } from "../../lib/supabase/client";
 import { useFeatures } from "../../lib/features/useFeatures";
+import { useAuth } from "../context/AuthContext";
+import Portal from "../../components/Portal";
+
 export default function FacilitatorDashboard() {
   const supabase = createClient();
   const router = useRouter();
   const features = useFeatures();
+  const { profile } = useAuth();
   const [facilitations, setFacilitations] = useState([]);
   const [user, setUser] = useState(null);
+  const [addModalOpen, setAddModalOpen] = useState(false);
 
-  // Fetch authenticated user on load
   useEffect(() => {
     const fetchUserAndFacilitations = async () => {
       const { data: { user: sessionUser }, error: userErr } = await supabase.auth.getUser();
@@ -26,7 +31,6 @@ export default function FacilitatorDashboard() {
         email: sessionUser.email,
       });
 
-      // Fetch facilitator-linked programmes
       const { data: programmes, error: progErr } = await supabase
         .from("programmes")
         .select("*")
@@ -35,7 +39,7 @@ export default function FacilitatorDashboard() {
       if (progErr) console.error("Error fetching programmes:", progErr);
       else
         setFacilitations(
-          programmes.map((p) => ({
+          (programmes || []).map((p) => ({
             id: p.id,
             qualifications: {
               name: p.name,
@@ -51,61 +55,7 @@ export default function FacilitatorDashboard() {
     fetchUserAndFacilitations();
   }, [supabase]);
 
-  // Add or link a qualification
-  const handleAddQualification = async () => {
-    if (!user) return;
-
-    const qualificationName = prompt("Enter Qualification Name:");
-    if (!qualificationName) return;
-
-    // Check if programme exists
-    const { data: existing, error: checkErr } = await supabase
-      .from("programmes")
-      .select("*")
-      .eq("name", qualificationName)
-      .single();
-
-    if (checkErr && checkErr.code !== "PGRST116") {
-      console.error("Error checking programme:", checkErr);
-      return;
-    }
-
-    let programme;
-
-    if (!existing) {
-      // Prompt for missing details
-      const nqfLevel = prompt("Enter NQF Level (e.g., 4, 5, 6):") || 1;
-      const credits = prompt("Enter total credits:") || 0;
-      const description = prompt("Enter programme description:") || "";
-
-      // Insert new programme linked to facilitator
-      const { data: newProg, error: insertErr } = await supabase
-        .from("programmes")
-        .insert([
-          {
-            name: qualificationName,
-            nqf_level: Number(nqfLevel),
-            credits_total: Number(credits),
-            description,
-            facilitator_id: user.id, // assign authenticated user ID
-          },
-        ])
-        .select()
-        .single();
-
-      if (insertErr) {
-        console.error("Error creating programme:", insertErr);
-        return;
-      }
-
-      programme = newProg;
-      alert("New programme created and linked to your profile.");
-    } else {
-      programme = existing;
-      alert("Qualification exists: linked to your profile.");
-    }
-
-    // Update UI immediately
+  const handleProgrammeCreated = (programme) => {
     setFacilitations((prev) => [
       ...prev,
       {
@@ -119,66 +69,85 @@ export default function FacilitatorDashboard() {
         end_date: programme.end_date || null,
       },
     ]);
+    setAddModalOpen(false);
   };
 
-  if (!user) return <p className="text-white p-6">Loading dashboard...</p>;
+  if (!user) {
+    return <p className="text-sm font-mono text-[var(--text-muted)]">Loading dashboard...</p>;
+  }
 
   return (
-    <div className="p-6 space-y-8">
-      {/* Greeting */}
-      <header className="text-center">
-        <h1 className="text-3xl font-extrabold text-white drop-shadow-lg">
-          {user?.full_name || user?.email?.split("@")[0]}s Dashboard
+    <div className="space-y-8">
+      <header className="animate-fade-up">
+        <p className="text-xs font-mono text-[var(--text-muted)] mb-1">FACILITATOR</p>
+        <h1 className="font-display text-3xl font-semibold" style={{ color: "var(--text)" }}>
+          {user.full_name}
         </h1>
-        <p className="text-gray-200 mt-1 font-medium">
-          Manage your qualifications and learner progress here
-        </p>
+        <p className="text-[var(--text-muted)] text-sm mt-1">Manage your qualifications and learner progress</p>
       </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
-        {/* Qualifications Facilitating */}
-        <section className="flex flex-col">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+        <section className="animate-fade-up stagger-1">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-2xl font-bold text-white">
+            <h2 className="font-display text-lg font-semibold" style={{ color: "var(--text)" }}>
               {features.hasTimetable ? "My Classes" : "Qualifications Facilitating"}
             </h2>
             {features.hasQctoFields && (
               <button
-                onClick={handleAddQualification}
-                className="flex items-center gap-2 text-blue-400 font-bold hover:underline"
+                onClick={() => setAddModalOpen(true)}
+                className="flex items-center gap-1.5 text-sm font-medium transition-opacity hover:opacity-80"
+                style={{ color: "var(--brand-color)" }}
               >
-                <PlusCircle className="w-5 h-5" /> Add Qualification
+                <PlusCircle className="w-4 h-4" /> Add Qualification
               </button>
             )}
           </div>
 
           {features.hasTimetable && (
-            <div className="mb-4 p-4 rounded-xl bg-gray-900/40 border border-gray-700 flex items-center gap-3 text-gray-200">
-              <Calendar className="w-5 h-5 text-blue-400" />
-              <span className="text-sm">Timetable and class roster management is coming here for school accounts.</span>
+            <div className="mb-4 p-4 rounded-xl paper flex items-center gap-3">
+              <Calendar className="w-5 h-5 flex-shrink-0" style={{ color: "var(--brand-color)" }} />
+              <span className="text-sm text-gray-600">
+                Timetable and class roster management is coming here for school accounts.
+              </span>
             </div>
           )}
 
           {facilitations.length === 0 ? (
-            <p className="text-gray-400 font-medium">No qualifications assigned yet.</p>
+            <div className="paper p-8 text-center text-gray-500 text-sm">
+              No qualifications assigned yet.
+            </div>
           ) : (
-            <ul className="grid gap-6 flex-1">
-              {facilitations.map((f) => {
+            <ul className="grid gap-4">
+              {facilitations.map((f, i) => {
                 const q = f.qualifications;
                 return (
                   <li
                     key={f.id}
-                    className="relative p-5 rounded-2xl shadow-md bg-gray-900/40 backdrop-blur-md border border-gray-700 hover:scale-[1.02] transition transform"
+                    className={`paper p-5 card-lift animate-fade-up stagger-${Math.min(i + 1, 4)}`}
                   >
-                    <img src="/dsk.jpg" alt={q?.name} className="w-full h-36 object-cover rounded-xl mb-3 shadow-sm" />
-                    <h3 className="text-lg font-bold text-white mb-2">{q?.name}</h3>
-                    <p className="text-gray-200 font-medium">NQF Level: {q?.nqf_level || "TBA"}</p>
-                    <p className="text-gray-200 font-medium">Credits: {q?.credits || "TBA"}</p>
-                    <p className="text-gray-400 text-sm font-semibold">
-                      Period: {f.start_date ? new Date(f.start_date).toLocaleDateString() : "Start TBA"} -{" "}
+                    <div className="flex items-start justify-between gap-3 mb-3">
+                      <div>
+                        <span
+                          className="inline-block text-xs font-mono px-2 py-1 rounded-full mb-2"
+                          style={{ background: "var(--seal-gold-soft)", color: "var(--seal-gold)" }}
+                        >
+                          NQF {q?.nqf_level || "TBA"}
+                        </span>
+                        <h3 className="font-display font-semibold" style={{ color: "var(--text)" }}>
+                          {q?.name}
+                        </h3>
+                      </div>
+                    </div>
+                    <p className="text-xs text-gray-400 font-mono mb-3">
+                      {f.start_date ? new Date(f.start_date).toLocaleDateString() : "Start TBA"} –{" "}
                       {f.end_date ? new Date(f.end_date).toLocaleDateString() : "Ongoing"}
+                      {" · "}{q?.credits || "TBA"} credits
                     </p>
-                    <Link href={`/module-player/facilitator/${f.id}`} className="mt-3 inline-block text-blue-400 font-bold hover:underline">
+                    <Link
+                      href={`/module-player/facilitator/${f.id}`}
+                      className="text-sm font-medium"
+                      style={{ color: "var(--brand-color)" }}
+                    >
                       Go to modules →
                     </Link>
                   </li>
@@ -188,34 +157,152 @@ export default function FacilitatorDashboard() {
           )}
         </section>
 
-        {/* Announcements & My Schedule */}
-        <section className="p-6 rounded-2xl bg-gray-800/60 backdrop-blur-md shadow-md border border-gray-700 flex flex-col h-full">
-          <div className="flex-1 grid grid-rows-2 gap-4">
-            {/* Top Half: Announcements */}
-            <div className="p-4 bg-blue-900/30 rounded-lg flex flex-col">
-              <h2 className="text-xl font-extrabold text-white mb-2">Announcements</h2>
-              <ul className="list-disc ml-6 text-gray-200 font-medium space-y-2 flex-1">
-                <li>QCTO audit visit scheduled for 10 September – prepare learner PoEs.</li>
-                <li>Upcoming assessor and moderator allocation – confirm your availability.</li>
-                <li>Unit Standard assessments due for moderation this month.</li>
-                <li>New compliance checklist uploaded to your facilitator portal.</li>
-              </ul>
-            </div>
+        <section className="grid grid-rows-2 gap-4 animate-fade-up stagger-2">
+          <div className="paper p-5">
+            <h2 className="font-display font-semibold mb-3" style={{ color: "var(--text)" }}>
+              Announcements
+            </h2>
+            <ul className="space-y-2 text-sm text-gray-600">
+              <li>QCTO audit visit scheduled for 10 September, prepare learner PoEs.</li>
+              <li>Upcoming assessor and moderator allocation, confirm your availability.</li>
+              <li>Unit Standard assessments due for moderation this month.</li>
+              <li>New compliance checklist uploaded to your facilitator portal.</li>
+            </ul>
+          </div>
 
-            {/* Bottom Half: My Schedule */}
-            <div className="p-4 bg-green-900/30 rounded-lg flex flex-col">
-              <h2 className="text-xl font-extrabold text-white mb-2">My Schedule</h2>
-              <ul className="text-gray-200 font-medium list-disc ml-6 flex-1 space-y-1">
-                <li>09:00 - 10:00: Knowledge Module</li>
-                <li>10:15 - 11:15: Practical Evidence Upload</li>
-                <li>11:30 - 12:30: Summative Assessment</li>
-                <li>13:00 - 14:00: MS Teams Session</li>
-              </ul>
-            </div>
+          <div className="paper p-5">
+            <h2 className="font-display font-semibold mb-3" style={{ color: "var(--text)" }}>
+              My Schedule
+            </h2>
+            <ul className="space-y-2 text-sm text-gray-600 font-mono">
+              <li>09:00–10:00 · Knowledge Module</li>
+              <li>10:15–11:15 · Practical Evidence Upload</li>
+              <li>11:30–12:30 · Summative Assessment</li>
+              <li>13:00–14:00 · MS Teams Session</li>
+            </ul>
           </div>
         </section>
       </div>
+
+      {addModalOpen && (
+        <AddQualificationModal
+          facilitatorId={user.id}
+          institutionId={profile?.institution_id}
+          onClose={() => setAddModalOpen(false)}
+          onCreated={handleProgrammeCreated}
+        />
+      )}
     </div>
   );
 }
 
+function AddQualificationModal({ facilitatorId, institutionId, onClose, onCreated }) {
+  const supabase = createClient();
+  const [name, setName] = useState("");
+  const [nqfLevel, setNqfLevel] = useState("");
+  const [credits, setCredits] = useState("");
+  const [description, setDescription] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const inputClass =
+    "w-full px-4 py-3 rounded-xl border text-sm transition-colors focus:outline-none focus:ring-2";
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!institutionId) {
+      alert("Your account isn't linked to an institution yet.");
+      return;
+    }
+    setSubmitting(true);
+
+    try {
+      const { data: existing, error: checkErr } = await supabase
+        .from("programmes")
+        .select("*")
+        .eq("name", name)
+        .eq("institution_id", institutionId)
+        .maybeSingle();
+
+      if (checkErr) throw checkErr;
+
+      let programme = existing;
+
+      if (!programme) {
+        const { data: newProg, error: insertErr } = await supabase
+          .from("programmes")
+          .insert([{
+            name,
+            nqf_level: Number(nqfLevel) || 1,
+            credits_total: Number(credits) || 0,
+            description,
+            facilitator_id: facilitatorId,
+            institution_id: institutionId,
+          }])
+          .select()
+          .single();
+
+        if (insertErr) throw insertErr;
+        programme = newProg;
+      }
+
+      onCreated(programme);
+    } catch (err) {
+      alert("Could not save qualification: " + err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <Portal>
+      <div onClick={onClose} className="fixed inset-0 bg-black/40 backdrop-blur-sm z-30" />
+      <div className="fixed inset-0 z-40 flex items-center justify-center p-4">
+        <div
+          className="relative w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl shadow-2xl p-8"
+          style={{ background: "var(--paper)" }}
+        >
+          <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 transition-colors">
+            ✕
+          </button>
+
+          <p className="text-xs font-mono text-[var(--text-muted)] mb-1">NEW QUALIFICATION</p>
+          <h2 className="font-display text-xl font-semibold mb-5" style={{ color: "var(--text)" }}>
+            Add a qualification
+          </h2>
+
+          <form onSubmit={handleSubmit} className="space-y-3">
+            <input
+              type="text" placeholder="Qualification name" value={name}
+              onChange={(e) => setName(e.target.value)} required
+              className={inputClass} style={{ borderColor: "var(--border-soft)", color: "var(--text)" }}
+            />
+            <div className="grid grid-cols-2 gap-3">
+              <input
+                type="number" placeholder="NQF Level" value={nqfLevel}
+                onChange={(e) => setNqfLevel(e.target.value)} required
+                className={inputClass} style={{ borderColor: "var(--border-soft)", color: "var(--text)" }}
+              />
+              <input
+                type="number" placeholder="Total credits" value={credits}
+                onChange={(e) => setCredits(e.target.value)} required
+                className={inputClass} style={{ borderColor: "var(--border-soft)", color: "var(--text)" }}
+              />
+            </div>
+            <textarea
+              placeholder="Description" value={description}
+              onChange={(e) => setDescription(e.target.value)} rows={3}
+              className={inputClass} style={{ borderColor: "var(--border-soft)", color: "var(--text)" }}
+            />
+            <button
+              type="submit" disabled={submitting}
+              className="w-full py-3 mt-2 rounded-xl text-white font-medium transition-all hover:brightness-110 disabled:opacity-50"
+              style={{ background: "var(--brand-color)" }}
+            >
+              {submitting ? "Saving..." : "Save Qualification"}
+            </button>
+          </form>
+        </div>
+      </div>
+    </Portal>
+  );
+}

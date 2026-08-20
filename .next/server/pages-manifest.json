@@ -2,7 +2,9 @@
   "/_app": "pages/_app.js",
   "/_error": "pages/_error.js",
   "/_document": "pages/_document.js",
+  "/": "pages/index.js",
+  "/dashboard": "pages/dashboard.js",
   "/qualifications": "pages/qualifications.js",
-  "/api/create-enrollment-checkout-session": "pages/api/create-enrollment-checkout-session.js",
-  "/": "pages/index.js"
+  "/admin/institution-settings": "pages/admin/institution-settings.js",
+  "/admin/billing": "pages/admin/billing.js"
 }
