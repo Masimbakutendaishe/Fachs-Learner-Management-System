@@ -2,7 +2,5 @@
   "/_app": "pages/_app.js",
   "/_error": "pages/_error.js",
   "/_document": "pages/_document.js",
-  "/qualifications": "pages/qualifications.js",
-  "/api/superadmin/list-users": "pages/api/superadmin/list-users.js",
-  "/superadmin": "pages/superadmin.js"
+  "/module-player/facilitator/[id]": "pages/module-player/facilitator/[id].js"
 }

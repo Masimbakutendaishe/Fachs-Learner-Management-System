@@ -2,7 +2,6 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
-import Link from "next/link";
 import { PlusCircle, Calendar } from "lucide-react";
 import { createClient } from "../../lib/supabase/client";
 import { useFeatures } from "../../lib/features/useFeatures";
@@ -94,9 +93,6 @@ export default function FacilitatorDashboard() {
               {features.hasTimetable ? "My Classes" : "Qualifications Facilitating"}
             </h2>
             <div className="flex items-center gap-4">
-              <Link href="/facilitator/manage-content" className="text-sm font-medium" style={{ color: "var(--brand-color)" }}>
-                Manage Weekly Content
-              </Link>
               {features.hasQctoFields && (
                 <button
                   onClick={() => setAddModalOpen(true)}

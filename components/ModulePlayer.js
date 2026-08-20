@@ -4,7 +4,14 @@ import { useRouter } from "next/router";
 import { createClient } from "../lib/supabase/client";
 import { useAuth } from "../pages/context/AuthContext";
 import SealProgress from "./SealProgress";
-import { MessageCircle, Video as VideoIcon, Cpu, Mic, MicOff, Video as Cam, VideoOff } from "lucide-react";
+import { MessageCircle, Video as VideoIcon, Cpu, Mic, MicOff, Video as Cam, VideoOff, ChevronLeft, ChevronRight } from "lucide-react";
+
+const ACTIVITY_LABELS = {
+  workbook: "Learner Workbook",
+  knowledge: "Knowledge Module",
+  summative: "Summative Assessment",
+  practical: "Practical Evidence",
+};
 
 function LinkButton({ href, children, variant = "solid" }) {
   if (!href) return null;
@@ -17,9 +24,16 @@ function LinkButton({ href, children, variant = "solid" }) {
   );
 }
 
-const UnitWeekIntro = ({ unitWeek, programmeName }) => (
+const UnitWeekIntro = ({ unitWeek, programmeName, isPast }) => (
   <div className="paper p-6 mb-6">
-    <p className="text-xs font-mono text-[var(--text-muted)] mb-1">{programmeName}</p>
+    <div className="flex items-center justify-between gap-3">
+      <p className="text-xs font-mono text-[var(--text-muted)] mb-1">{programmeName}</p>
+      {isPast && (
+        <span className="text-xs font-medium px-2.5 py-1 rounded-full" style={{ background: "#F3F4F6", color: "#6B7280" }}>
+          Past week
+        </span>
+      )}
+    </div>
     <h1 className="font-display text-2xl font-semibold" style={{ color: "var(--text)" }}>
       {unitWeek?.unit_standard_title || "No unit title yet"}
     </h1>
@@ -86,7 +100,32 @@ const TeamsSession = ({ url, startDate }) => {
   );
 };
 
-const PracticalEvidenceUpload = ({ title, questions, onComplete, enrollment, unitWeek }) => {
+const SubmissionStatus = ({ submission }) => {
+  if (!submission) return null;
+  return (
+    <div className="p-4 rounded-xl mb-4 flex items-center justify-between" style={{ background: "var(--paper-muted)" }}>
+      <div>
+        <p className="text-sm font-medium" style={{ color: "var(--text)" }}>
+          {submission.status === "graded" ? "Graded" : "Submitted, awaiting grading"}
+        </p>
+        {submission.status === "graded" && (
+          <p className="text-xs text-gray-500 mt-0.5">
+            Grade: <span className="font-mono font-medium">{submission.grade ?? "-"}</span>
+            {submission.feedback && ` - ${submission.feedback}`}
+          </p>
+        )}
+      </div>
+      <span
+        className="text-xs font-medium px-2.5 py-1 rounded-full"
+        style={submission.status === "graded" ? { background: "#ECFDF5", color: "#047857" } : { background: "var(--seal-gold-soft)", color: "var(--seal-gold)" }}
+      >
+        {submission.status === "graded" ? "Graded" : "Pending"}
+      </span>
+    </div>
+  );
+};
+
+const PracticalEvidenceUpload = ({ title, questions, onComplete, enrollment, unitWeek, existingSubmission, readOnly }) => {
   const supabase = createClient();
   const [step, setStep] = useState(0);
   const [uploads, setUploads] = useState({});
@@ -129,7 +168,14 @@ const PracticalEvidenceUpload = ({ title, questions, onComplete, enrollment, uni
   return (
     <div className="paper p-6 mb-4">
       <h2 className="font-display text-xl font-semibold mb-4" style={{ color: "var(--text)" }}>{title}</h2>
-      {questions?.length > 0 && (
+      <SubmissionStatus submission={existingSubmission} />
+      {existingSubmission ? (
+        <p className="text-sm text-gray-500">You've already submitted this activity for this week.</p>
+      ) : readOnly ? (
+        <p className="text-sm text-gray-400">This week has passed and no submission was made.</p>
+      ) : questions?.length === 0 ? (
+        <p className="text-sm text-gray-400">Your facilitator hasn't added questions for this activity yet.</p>
+      ) : (
         <>
           <p className="text-xs font-mono text-[var(--seal-gold)] mb-4">Upload your evidence for each question below</p>
           <div className="p-4 rounded-xl" style={{ background: "var(--paper-muted)" }}>
@@ -152,7 +198,7 @@ const PracticalEvidenceUpload = ({ title, questions, onComplete, enrollment, uni
   );
 };
 
-const LearningResource = ({ title, url, questions, onComplete, activityType, enrollment, unitWeek }) => {
+const LearningResource = ({ title, url, questions, onComplete, activityType, enrollment, unitWeek, existingSubmission, readOnly }) => {
   const supabase = createClient();
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState({});
@@ -187,7 +233,20 @@ const LearningResource = ({ title, url, questions, onComplete, activityType, enr
       ) : (
         <p className="text-sm text-gray-400 mb-4">No {title} link available yet.</p>
       )}
-      {questions?.length > 0 && (
+      <div className="mt-4">
+        <SubmissionStatus submission={existingSubmission} />
+      </div>
+      {existingSubmission ? (
+        <div className="p-4 rounded-xl text-sm text-gray-600 space-y-2" style={{ background: "var(--paper-muted)" }}>
+          {existingSubmission.answers && Object.entries(existingSubmission.answers).map(([q, a]) => (
+            <p key={q}><span className="font-medium text-gray-800">Q{Number(q) + 1}:</span> {a}</p>
+          ))}
+        </div>
+      ) : readOnly ? (
+        <p className="text-sm text-gray-400">This week has passed and no submission was made.</p>
+      ) : questions?.length === 0 ? (
+        <p className="text-sm text-gray-400">Your facilitator hasn't added questions for this activity yet.</p>
+      ) : (
         <>
           <p className="text-xs font-mono text-[var(--seal-gold)] mb-4">Read the material fully before answering below</p>
           <div className="p-4 rounded-xl" style={{ background: "var(--paper-muted)" }}>
@@ -233,20 +292,148 @@ const LearnerGuide = ({ title, url, chapters, onComplete }) => {
   );
 };
 
+const ChatPanel = ({ enrollment }) => {
+  const supabase = createClient();
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(true);
+  const endRef = useRef(null);
+
+  useEffect(() => {
+    fetchMessages();
+    const channel = supabase
+      .channel(`chat-${enrollment.programme_id}-${enrollment.user_id}`)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "chat_messages", filter: `learner_id=eq.${enrollment.user_id}` }, (payload) => {
+        setMessages((prev) => [...prev, payload.new]);
+      })
+      .subscribe();
+    return () => supabase.removeChannel(channel);
+  }, []);
+
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  const fetchMessages = async () => {
+    const { data } = await supabase
+      .from("chat_messages")
+      .select("*")
+      .eq("programme_id", enrollment.programme_id)
+      .eq("learner_id", enrollment.user_id)
+      .order("created_at", { ascending: true });
+    setMessages(data || []);
+    setLoading(false);
+    await supabase
+      .from("chat_messages")
+      .update({ read_by_learner: true })
+      .eq("programme_id", enrollment.programme_id)
+      .eq("learner_id", enrollment.user_id)
+      .eq("read_by_learner", false);
+  };
+
+  const sendMessage = async () => {
+    if (!input.trim()) return;
+    const text = input;
+    setInput("");
+    const { error } = await supabase.from("chat_messages").insert({
+      programme_id: enrollment.programme_id,
+      institution_id: enrollment.institution_id,
+      learner_id: enrollment.user_id,
+      sender_id: enrollment.user_id,
+      body: text,
+    });
+    if (error) alert("Could not send message: " + error.message);
+    else fetchMessages();
+  };
+
+  return (
+    <div className="paper p-6">
+      <h2 className="font-display text-xl font-semibold mb-4" style={{ color: "var(--text)" }}>Chat with Facilitators</h2>
+      <div className="h-72 overflow-y-auto rounded-xl p-3 mb-3 flex flex-col gap-2" style={{ background: "var(--paper-muted)" }}>
+        {loading ? (
+          <p className="text-xs text-gray-400 m-auto">Loading...</p>
+        ) : messages.length === 0 ? (
+          <p className="text-xs text-gray-400 m-auto text-center px-4">No messages yet. Ask your facilitator a question below.</p>
+        ) : (
+          messages.map((m) => (
+            <div
+              key={m.id}
+              className={`p-2.5 rounded-xl text-sm max-w-[80%] ${m.sender_id === enrollment.user_id ? "self-end text-white" : "self-start"}`}
+              style={m.sender_id === enrollment.user_id ? { background: "var(--brand-color)" } : { background: "var(--paper)", color: "var(--text)", border: "1px solid var(--border-soft)" }}
+            >
+              {m.body}
+            </div>
+          ))
+        )}
+        <div ref={endRef} />
+      </div>
+      <div className="flex gap-2">
+        <input
+          type="text" value={input} onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+          placeholder="Type a message..." className="flex-1 px-3 py-2 rounded-lg border text-sm"
+          style={{ borderColor: "var(--border-soft)" }}
+        />
+        <button onClick={sendMessage} className="px-4 py-2 rounded-lg text-white text-sm font-medium" style={{ background: "var(--brand-color)" }}>Send</button>
+      </div>
+    </div>
+  );
+};
+
+const GradesPanel = ({ submissions }) => (
+  <div className="paper p-6">
+    <h2 className="font-display text-xl font-semibold mb-4" style={{ color: "var(--text)" }}>My Grades for This Course</h2>
+    {submissions.length === 0 ? (
+      <p className="text-sm text-gray-400">No submissions yet for this programme.</p>
+    ) : (
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="text-left border-b" style={{ borderColor: "var(--border-soft)" }}>
+              <th className="py-2 pr-4 font-medium text-gray-500">Activity</th>
+              <th className="py-2 pr-4 font-medium text-gray-500">Submitted</th>
+              <th className="py-2 pr-4 font-medium text-gray-500">Status</th>
+              <th className="py-2 pr-4 font-medium text-gray-500">Grade</th>
+              <th className="py-2 font-medium text-gray-500">Feedback</th>
+            </tr>
+          </thead>
+          <tbody>
+            {submissions.map((s) => (
+              <tr key={s.id} className="border-b last:border-0" style={{ borderColor: "var(--border-soft)" }}>
+                <td className="py-2 pr-4" style={{ color: "var(--text)" }}>{ACTIVITY_LABELS[s.activity_type] || s.activity_type}</td>
+                <td className="py-2 pr-4 text-gray-500 font-mono">{new Date(s.submitted_at).toLocaleDateString()}</td>
+                <td className="py-2 pr-4">
+                  <span className="text-xs font-medium px-2 py-1 rounded-full" style={s.status === "graded" ? { background: "#ECFDF5", color: "#047857" } : { background: "var(--seal-gold-soft)", color: "var(--seal-gold)" }}>
+                    {s.status === "graded" ? "Graded" : "Pending"}
+                  </span>
+                </td>
+                <td className="py-2 pr-4 font-mono" style={{ color: "var(--text)" }}>{s.grade ?? "-"}</td>
+                <td className="py-2 text-gray-500">{s.feedback || "-"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )}
+  </div>
+);
+
 export default function ModulePlayer({ enrollmentId }) {
   const supabase = createClient();
   const { user } = useAuth();
   const router = useRouter();
   const [enrollment, setEnrollment] = useState(null);
-  const [unitWeek, setUnitWeek] = useState(null);
+  const [allWeeks, setAllWeeks] = useState([]);
+  const [selectedWeekId, setSelectedWeekId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [currentActivity, setCurrentActivity] = useState(null);
-  const [completed, setCompleted] = useState({});
+  const [mySubmissions, setMySubmissions] = useState([]);
 
   const alwaysAccessible = [
     { key: "chat", label: "Chat with facilitators", icon: <MessageCircle size={20} /> },
     { key: "teams", label: "Join Teams Session", icon: <VideoIcon size={20} /> },
     { key: "ai", label: "Ask Fachs AI", icon: <Cpu size={20} /> },
+    { key: "grades", label: "My Grades", icon: <SealProgress percent={0} size={18} /> },
   ];
 
   useEffect(() => {
@@ -271,15 +458,29 @@ export default function ModulePlayer({ enrollmentId }) {
           return;
         }
         setEnrollment(enrollmentData);
+
         const { data: unitWeeksData } = await supabase
           .from("unit_weeks")
           .select("*")
           .eq("programme_id", enrollmentData.programme_id)
           .order("week_start_date", { ascending: true });
+
         const weeksArray = unitWeeksData || [];
+        setAllWeeks(weeksArray);
+
         const today = new Date();
-        const currentWeek = weeksArray.find((w) => w.week_start_date && w.week_end_date && new Date(w.week_start_date) <= today && new Date(w.week_end_date) >= today) || weeksArray[0] || null;
-        setUnitWeek(currentWeek);
+        const currentWeek =
+          weeksArray.find((w) => w.week_start_date && w.week_end_date && new Date(w.week_start_date) <= today && new Date(w.week_end_date) >= today) ||
+          weeksArray[weeksArray.length - 1] ||
+          null;
+        setSelectedWeekId(currentWeek?.id || null);
+
+        const { data: submissionsData } = await supabase
+          .from("submissions")
+          .select("*")
+          .eq("user_id", userId)
+          .eq("programme_id", enrollmentData.programme_id);
+        setMySubmissions(submissionsData || []);
       } catch (err) {
         console.error("Error loading module:", err);
       } finally {
@@ -289,10 +490,23 @@ export default function ModulePlayer({ enrollmentId }) {
     fetchData();
   }, [enrollmentId]);
 
-  const handleComplete = (key) => {
-    setCompleted((prev) => ({ ...prev, [key]: true }));
+  const refreshSubmissions = async () => {
+    if (!enrollment) return;
+    const { data } = await supabase
+      .from("submissions")
+      .select("*")
+      .eq("user_id", enrollment.user_id)
+      .eq("programme_id", enrollment.programme_id);
+    setMySubmissions(data || []);
     setCurrentActivity(null);
   };
+
+  const unitWeek = allWeeks.find((w) => w.id === selectedWeekId) || null;
+  const weekIndex = allWeeks.findIndex((w) => w.id === selectedWeekId);
+  const isPastWeek = unitWeek ? new Date(unitWeek.week_end_date) < new Date().setHours(0, 0, 0, 0) : false;
+
+  const findSubmission = (activityType) =>
+    mySubmissions.find((s) => s.unit_week_id === unitWeek?.id && s.activity_type === activityType) || null;
 
   if (loading) return <p className="text-sm font-mono text-[var(--text-muted)]">Loading module...</p>;
 
@@ -304,7 +518,7 @@ export default function ModulePlayer({ enrollmentId }) {
     );
   }
 
-  if (!unitWeek) {
+  if (allWeeks.length === 0) {
     return (
       <div className="animate-fade-up">
         <UnitWeekIntro unitWeek={null} programmeName={enrollment.programmes?.name} />
@@ -329,84 +543,145 @@ export default function ModulePlayer({ enrollmentId }) {
 
   return (
     <div className="animate-fade-up">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
         <p className="text-xs font-mono text-[var(--text-muted)]">MODULE PLAYER</p>
         <SealProgress percent={progressPercent} size={44} />
       </div>
+
+      <div className="paper p-3 mb-4 flex items-center justify-between gap-3">
+        <button
+          onClick={() => weekIndex > 0 && setSelectedWeekId(allWeeks[weekIndex - 1].id)}
+          disabled={weekIndex <= 0}
+          className="p-2 rounded-lg disabled:opacity-30"
+          style={{ color: "var(--text)" }}
+        >
+          <ChevronLeft size={18} />
+        </button>
+        <select
+          value={selectedWeekId || ""}
+          onChange={(e) => { setSelectedWeekId(Number.isNaN(Number(e.target.value)) ? e.target.value : e.target.value); setCurrentActivity(null); }}
+          className="flex-1 text-sm font-medium text-center bg-transparent outline-none"
+          style={{ color: "var(--text)" }}
+        >
+          {allWeeks.map((w, i) => (
+            <option key={w.id} value={w.id}>
+              Week {i + 1}: {w.unit_standard_title} {new Date(w.week_end_date) < new Date().setHours(0,0,0,0) ? "(past)" : ""}
+            </option>
+          ))}
+        </select>
+        <button
+          onClick={() => weekIndex < allWeeks.length - 1 && setSelectedWeekId(allWeeks[weekIndex + 1].id)}
+          disabled={weekIndex >= allWeeks.length - 1}
+          className="p-2 rounded-lg disabled:opacity-30"
+          style={{ color: "var(--text)" }}
+        >
+          <ChevronRight size={18} />
+        </button>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr] gap-6">
         <aside className="paper p-4 h-fit lg:sticky lg:top-24">
           <p className="text-xs font-mono text-gray-400 mb-3 px-1">THIS WEEK</p>
           <ul className="space-y-1">
-            {activities.map((a) => (
-              <li key={a.key}>
-                <button onClick={() => setCurrentActivity(a.key)} className="w-full text-left px-3 py-2 rounded-lg text-sm transition-colors flex items-center justify-between" style={currentActivity === a.key ? { background: "var(--brand-color)", color: "white" } : { color: "var(--text)" }}>
-                  <span className={currentActivity === a.key ? "" : "hover:opacity-70"}>{a.label}</span>
-                  {completed[a.key] && <span style={{ color: currentActivity === a.key ? "white" : "var(--seal-gold)" }}>done</span>}
-                </button>
-              </li>
-            ))}
+            {activities.map((a) => {
+              const sub = findSubmission(a.key);
+              return (
+                <li key={a.key}>
+                  <button onClick={() => setCurrentActivity(a.key)} className="w-full text-left px-3 py-2 rounded-lg text-sm transition-colors flex items-center justify-between" style={currentActivity === a.key ? { background: "var(--brand-color)", color: "white" } : { color: "var(--text)" }}>
+                    <span className={currentActivity === a.key ? "" : "hover:opacity-70"}>{a.label}</span>
+                    {sub && <span style={{ color: currentActivity === a.key ? "white" : sub.status === "graded" ? "#047857" : "var(--seal-gold)" }}>{sub.status === "graded" ? `[done] ${sub.grade ?? ""}` : "[done]"}</span>}
+                  </button>
+                </li>
+              );
+            })}
           </ul>
         </aside>
+
         <div className="lg:hidden -mt-2">
           <select className="w-full p-3 rounded-xl border text-sm" style={{ borderColor: "var(--border-soft)" }} value={currentActivity || ""} onChange={(e) => setCurrentActivity(e.target.value)}>
             <option value="">Select activity...</option>
-            {activities.map((a) => <option key={a.key} value={a.key}>{a.label}{completed[a.key] ? " (done)" : ""}</option>)}
+            {activities.map((a) => {
+              const sub = findSubmission(a.key);
+              return <option key={a.key} value={a.key}>{a.label}{sub ? " (submitted)" : ""}</option>;
+            })}
           </select>
         </div>
+
         <main>
-          <UnitWeekIntro unitWeek={unitWeek} programmeName={enrollment.programmes?.name} />
+          <UnitWeekIntro unitWeek={unitWeek} programmeName={enrollment.programmes?.name} isPast={isPastWeek} />
+
           {currentActivity === "intro" && (
             <div className="paper p-6 mb-4">
               <h2 className="font-display text-xl font-semibold mb-2" style={{ color: "var(--text)" }}>Facilitator's Intro</h2>
-              <p className="text-sm text-gray-600 mb-4">{unitWeek.facilitator_intro || "No intro provided for this week yet."}</p>
-              <button onClick={() => handleComplete("intro")} className="px-4 py-2 rounded-lg text-sm text-white font-medium bg-emerald-600 hover:bg-emerald-500">Mark as Complete</button>
+              <p className="text-sm text-gray-600">{unitWeek?.facilitator_intro || "No intro provided for this week yet."}</p>
             </div>
           )}
+
           {currentActivity === "guide" && (
-            <LearnerGuide title="Learner Guide" url={unitWeek.learner_guide_url} chapters={unitWeek.chapters || [{ title: "Chapter 1: Intro", content: "No content yet." }]} onComplete={() => handleComplete("guide")} />
+            <LearnerGuide title="Learner Guide" url={unitWeek?.learner_guide_url} chapters={unitWeek?.chapters || [{ title: "Chapter 1: Intro", content: "No content yet." }]} onComplete={() => setCurrentActivity(null)} />
           )}
+
           {currentActivity === "teams" && (
             <>
-              <TeamsSession url={unitWeek.video_url || unitWeek.teams_session_link} startDate={unitWeek.week_start_date} />
-              <ResourceCard label="Open Teams / Video link" url={unitWeek.video_url || unitWeek.teams_session_link} />
+              <TeamsSession url={unitWeek?.video_url || unitWeek?.teams_session_link} startDate={unitWeek?.week_start_date} />
+              <ResourceCard label="Open Teams / Video link" url={unitWeek?.video_url || unitWeek?.teams_session_link} />
             </>
           )}
+
           {["workbook", "knowledge", "summative"].includes(currentActivity) && (
             <LearningResource
               title={activities.find((a) => a.key === currentActivity)?.label}
-              url={unitWeek[`${currentActivity === "workbook" ? "learner_workbook" : currentActivity === "knowledge" ? "knowledge_module" : "summative_assessment"}_url`]}
-              questions={["1) Describe the key points.", "2) How will you apply this in practice?"]}
+              url={unitWeek?.[`${currentActivity === "workbook" ? "learner_workbook" : currentActivity === "knowledge" ? "knowledge_module" : "summative_assessment"}_url`]}
+              questions={unitWeek?.activity_questions?.[currentActivity] || []}
               activityType={currentActivity}
               enrollment={enrollment}
               unitWeek={unitWeek}
-              onComplete={() => handleComplete(currentActivity)}
+              existingSubmission={findSubmission(currentActivity)}
+              readOnly={isPastWeek}
+              onComplete={refreshSubmissions}
             />
           )}
+
           {currentActivity === "practical" && (
-            <PracticalEvidenceUpload title="Practical Evidence Upload" questions={["Upload evidence for Question 1", "Upload evidence for Question 2"]} enrollment={enrollment} unitWeek={unitWeek} onComplete={() => handleComplete("practical")} />
+            <PracticalEvidenceUpload
+              title="Practical Evidence Upload"
+              questions={unitWeek?.activity_questions?.practical || []}
+              enrollment={enrollment}
+              unitWeek={unitWeek}
+              existingSubmission={findSubmission("practical")}
+              readOnly={isPastWeek}
+              onComplete={refreshSubmissions}
+            />
           )}
+
           {currentActivity === "ai" && (
             <div className="paper p-6">
               <h2 className="font-display text-xl font-semibold mb-2" style={{ color: "var(--text)" }}>AI Help Panel</h2>
               <p className="text-sm text-gray-500">Ask Fachs AI questions about this week's content.</p>
             </div>
           )}
+
           {currentActivity === "sor" && (
             <div className="paper p-6">
               <h2 className="font-display text-xl font-semibold mb-2" style={{ color: "var(--text)" }}>Statement of Results</h2>
-              {unitWeek.sor_pdf_url ? <LinkButton href={unitWeek.sor_pdf_url} variant="link">View SOR PDF</LinkButton> : <p className="text-sm text-gray-400">No SOR document available yet.</p>}
+              {unitWeek?.sor_pdf_url ? <LinkButton href={unitWeek.sor_pdf_url} variant="link">View SOR PDF</LinkButton> : <p className="text-sm text-gray-400">No SOR document available yet.</p>}
             </div>
           )}
+
+          {currentActivity === "grades" && <GradesPanel submissions={mySubmissions} />}
+          {currentActivity === "chat" && <ChatPanel enrollment={enrollment} />}
+
           {!currentActivity && (
             <div className="paper p-8 text-center text-gray-500 text-sm">Select an activity from the sidebar or dropdown to get started.</div>
           )}
         </main>
       </div>
+
       <div className="fixed bottom-24 right-6 flex flex-col gap-3 z-20">
         {alwaysAccessible.map((a) => (
           <div key={a.key} className="group relative">
             <button onClick={() => setCurrentActivity(a.key)} className="w-11 h-11 flex items-center justify-center rounded-full shadow-lg transition-transform hover:scale-105" style={{ background: "var(--paper)", border: "1px solid var(--border-soft)", color: "var(--brand-color)" }}>
-              {a.icon}
+              {a.key === "grades" ? <span className="font-mono text-xs">%</span> : a.icon}
             </button>
             <span className="absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity text-xs font-medium px-2.5 py-1 rounded-lg shadow-lg whitespace-nowrap" style={{ background: "var(--paper)", color: "var(--text)" }}>
               {a.label}

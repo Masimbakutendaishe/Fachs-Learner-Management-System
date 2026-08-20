@@ -35,6 +35,15 @@ export default async function handler(req, res) {
         break;
       }
 
+      if (session.mode === "payment" && session.metadata?.invoice_id) {
+        // Student paying a fee/invoice
+        await admin
+          .from("invoices")
+          .update({ status: "paid", paid_at: new Date().toISOString() })
+          .eq("id", session.metadata.invoice_id);
+        break;
+      }
+
       // Institution subscribing to a platform plan
       const { institution_id, plan_id } = session.metadata;
       await admin.from("subscriptions").insert({

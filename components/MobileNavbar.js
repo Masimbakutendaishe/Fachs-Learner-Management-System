@@ -2,6 +2,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Menu, X, User, LayoutDashboard, LogOut, Bell } from "lucide-react";
+import { createClient as createSupabaseClient } from "../lib/supabase/client";
 import FacilitatorLoginModal from "./FacilitatorLoginModal";
 import AuthModal from "./AuthModal";
 import { useAuth } from "../pages/context/AuthContext";
@@ -12,6 +13,33 @@ export default function MobileNavbar() {
   const [isFacilitatorModalOpen, setIsFacilitatorModalOpen] = useState(false);
   const [isAuthModalOpen, setAuthModalOpen] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [showNotifs, setShowNotifs] = useState(false);
+  const unreadCount = notifications.filter((n) => !n.read).length;
+
+  useEffect(() => {
+    if (!user) return;
+    const supabase = createSupabaseClient();
+    const fetchNotifs = async () => {
+      const { data } = await supabase
+        .from("notifications")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(20);
+      setNotifications(data || []);
+    };
+    fetchNotifs();
+    const interval = setInterval(fetchNotifs, 30000);
+    return () => clearInterval(interval);
+  }, [user]);
+
+  const markAllRead = async () => {
+    if (!user || unreadCount === 0) return;
+    const supabase = createSupabaseClient();
+    await supabase.from("notifications").update({ read: true }).eq("user_id", user.id).eq("read", false);
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+  };
 
   const displayName = profile?.first_name
     ? `${profile.first_name} ${profile.surname || ""}`.trim()
@@ -35,10 +63,18 @@ export default function MobileNavbar() {
     setIsOpen(false);
   };
 
-  const menuItems = [
-    { name: "Home", href: "/" },
-    { name: "Qualifications", href: "/qualifications" },
-  ];
+  const menuItems =
+    profile?.role === "facilitator"
+      ? [{ name: "Home", href: "/" }]
+      : profile?.role === "institution_admin"
+      ? [
+          { name: "Home", href: "/" },
+          { name: "Institution Settings", href: "/admin/institution-settings" },
+        ]
+      : [
+          { name: "Home", href: "/" },
+          { name: "Qualifications", href: "/qualifications" },
+        ];
 
   return (
     <nav className="flex justify-between items-center h-16 relative" style={{ color: "var(--text)" }}>
@@ -61,12 +97,50 @@ export default function MobileNavbar() {
       <div className="hidden md:flex items-center gap-3">
         {isAuthenticated && (
           <>
-            <Link href="/dashboard" className="p-2 rounded-lg hover:bg-black/5 transition-colors">
+            <Link
+              href={
+                profile?.role === "facilitator" ? "/facilitator/dashboard" :
+                profile?.role === "institution_admin" ? "/admin/institution-settings" :
+                "/dashboard"
+              }
+              className="p-2 rounded-lg hover:bg-black/5 transition-colors"
+            >
               <LayoutDashboard size={18} className="text-[var(--text-muted)]" />
             </Link>
-            <button className="p-2 rounded-lg hover:bg-black/5 transition-colors">
-              <Bell size={18} className="text-[var(--text-muted)]" />
-            </button>
+            <div className="relative">
+              <button
+                onClick={() => { setShowNotifs((v) => !v); if (!showNotifs) markAllRead(); }}
+                className="p-2 rounded-lg hover:bg-black/5 transition-colors relative"
+              >
+                <Bell size={18} className="text-[var(--text-muted)]" />
+                {unreadCount > 0 && (
+                  <span className="absolute top-0 right-0 w-4 h-4 rounded-full text-white text-[10px] flex items-center justify-center" style={{ background: "var(--brand-color)" }}>
+                    {unreadCount}
+                  </span>
+                )}
+              </button>
+              {showNotifs && (
+                <div className="absolute right-0 mt-2 w-80 max-h-96 overflow-y-auto rounded-xl shadow-2xl border z-50" style={{ background: "var(--surface)", borderColor: "var(--border-soft)" }}>
+                  {notifications.length === 0 ? (
+                    <p className="p-4 text-sm text-[var(--text-muted)] text-center">No notifications yet.</p>
+                  ) : (
+                    notifications.map((n) => (
+                      <Link
+                        key={n.id}
+                        href={n.link || "#"}
+                        onClick={() => setShowNotifs(false)}
+                        className="block px-4 py-3 border-b last:border-0 hover:bg-white/5 transition-colors"
+                        style={{ borderColor: "var(--border-soft)" }}
+                      >
+                        <p className="text-sm font-medium text-white">{n.title}</p>
+                        {n.body && <p className="text-xs text-[var(--text-muted)] mt-0.5">{n.body}</p>}
+                        <p className="text-xs text-[var(--text-muted)] mt-1 font-mono">{new Date(n.created_at).toLocaleDateString()}</p>
+                      </Link>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
           </>
         )}
 
@@ -112,13 +186,21 @@ export default function MobileNavbar() {
                 <p className="text-sm text-white truncate">{user?.email}</p>
                 <p className="text-xs text-[var(--text-muted)] capitalize font-mono mt-0.5">{profile?.role?.replace("_", " ")}</p>
               </div>
+              {profile?.role === "learner" && (
+                <Link href="/progress" className="block px-4 py-2.5 text-sm text-[var(--text-muted)] hover:text-white hover:bg-white/5 transition-colors">
+                  My Progress &amp; Marks
+                </Link>
+              )}
               {profile?.role === "institution_admin" && (
                 <>
                   <Link href="/admin/institution-settings" className="block px-4 py-2.5 text-sm text-[var(--text-muted)] hover:text-white hover:bg-black/5 transition-colors">
                     Institution Settings
                   </Link>
-                  <Link href="/admin/billing" className="block px-4 py-2.5 text-sm text-[var(--text-muted)] hover:text-white hover:bg-black/5 transition-colors">
+                  <Link href="/admin/billing" className="block px-4 py-2.5 text-sm text-[var(--text-muted)] hover:text-white hover:bg-white/5 transition-colors">
                     Billing
+                  </Link>
+                  <Link href="/admin/fees" className="block px-4 py-2.5 text-sm text-[var(--text-muted)] hover:text-white hover:bg-white/5 transition-colors">
+                    Fees &amp; Invoices
                   </Link>
                 </>
               )}
@@ -155,7 +237,15 @@ export default function MobileNavbar() {
 
           {isAuthenticated ? (
             <>
-              <Link href="/dashboard" onClick={() => setIsOpen(false)} className="block px-3 py-2.5 rounded-lg text-sm text-[var(--text-muted)] hover:text-white hover:bg-black/5 transition-colors">
+              <Link
+                href={
+                  profile?.role === "facilitator" ? "/facilitator/dashboard" :
+                  profile?.role === "institution_admin" ? "/admin/institution-settings" :
+                  "/dashboard"
+                }
+                onClick={() => setIsOpen(false)}
+                className="block px-3 py-2.5 rounded-lg text-sm text-[var(--text-muted)] hover:text-white hover:bg-black/5 transition-colors"
+              >
                 Dashboard
               </Link>
               <button onClick={signOut} className="flex items-center gap-2 w-full px-3 py-2.5 rounded-lg text-sm text-red-300 hover:bg-black/5 transition-colors text-left">
