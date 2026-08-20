@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/router";
 import { createClient } from "../../../lib/supabase/client";
 import Portal from "../../../components/Portal";
@@ -585,12 +585,20 @@ function SubmissionRow({ sub, supabase, onGraded }) {
 function WeekModal({ week, onClose, onSaved }) {
   const supabase = createClient();
   const readOnly = !!week.readOnly;
+  const toLocalInput = (v) => {
+    if (!v) return "";
+    const d = new Date(v);
+    const pad = (n) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
+
   const [form, setForm] = useState({
     unit_standard_title: week.unit_standard_title || "",
     week_start_date: week.week_start_date || "",
     week_end_date: week.week_end_date || "",
     facilitator_intro: week.facilitator_intro || "",
     teams_session_link: week.teams_session_link || "",
+    session_datetime: toLocalInput(week.session_datetime),
     video_url: week.video_url || "",
     learner_guide_url: week.learner_guide_url || "",
     learner_workbook_url: week.learner_workbook_url || "",
@@ -599,10 +607,37 @@ function WeekModal({ week, onClose, onSaved }) {
   });
   const [uploading, setUploading] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [schedulingMeeting, setSchedulingMeeting] = useState(false);
   const [questions, setQuestions] = useState(week.activity_questions || { workbook: [], knowledge: [], summative: [], practical: [] });
   const [newQuestionText, setNewQuestionText] = useState({ workbook: "", knowledge: "", summative: "", practical: "" });
 
   const handleFieldChange = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
+
+  const handleScheduleTeamsMeeting = async () => {
+    setSchedulingMeeting(true);
+    try {
+      const start = new Date(form.session_datetime);
+      const end = new Date(start.getTime() + 60 * 60000);
+      const res = await fetch("/api/create-teams-meeting", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          subject: form.unit_standard_title || "Class Session",
+          startDateTime: start.toISOString(),
+          endDateTime: end.toISOString(),
+          institutionId: week.institution_id,
+        }),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      handleFieldChange("teams_session_link", data.joinUrl);
+      alert("Teams meeting scheduled and linked.");
+    } catch (err) {
+      alert("Could not schedule Teams meeting: " + err.message);
+    } finally {
+      setSchedulingMeeting(false);
+    }
+  };
 
   const addQuestion = (activityKey) => {
     const text = newQuestionText[activityKey]?.trim();
@@ -634,7 +669,13 @@ function WeekModal({ week, onClose, onSaved }) {
     e.preventDefault();
     setSaving(true);
     try {
-      const payload = { ...form, programme_id: week.programme_id, institution_id: week.institution_id, activity_questions: questions };
+      const payload = {
+        ...form,
+        session_datetime: form.session_datetime ? new Date(form.session_datetime).toISOString() : null,
+        programme_id: week.programme_id,
+        institution_id: week.institution_id,
+        activity_questions: questions,
+      };
       const isNewWeek = !week.id;
       const { error } = isNewWeek
         ? await supabase.from("unit_weeks").insert([payload])
@@ -703,6 +744,29 @@ function WeekModal({ week, onClose, onSaved }) {
                 <label className="block text-xs text-[var(--text-muted)] mb-1">End date</label>
                 <input type="date" value={form.week_end_date} onChange={(e) => handleFieldChange("week_end_date", e.target.value)} required disabled={readOnly} className={inputClass} style={{ borderColor: "var(--border-soft)" }} />
               </div>
+            </div>
+
+            <div>
+              <label className="block text-xs text-[var(--text-muted)] mb-1">Live session date &amp; time</label>
+              <input
+                type="datetime-local" value={form.session_datetime}
+                onChange={(e) => handleFieldChange("session_datetime", e.target.value)}
+                disabled={readOnly} className={inputClass} style={{ borderColor: "var(--border-soft)" }}
+              />
+              {!readOnly && (
+                <button
+                  type="button"
+                  disabled={!form.session_datetime || schedulingMeeting}
+                  onClick={handleScheduleTeamsMeeting}
+                  className="mt-2 px-3 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
+                  style={{ border: "1px solid var(--border-soft)", color: "var(--text)" }}
+                >
+                  {schedulingMeeting ? "Scheduling..." : "Schedule Teams Meeting"}
+                </button>
+              )}
+              {form.teams_session_link && (
+                <p className="text-xs mt-1" style={{ color: "var(--seal-gold)" }}>Meeting link ready</p>
+              )}
             </div>
 
             {FIELDS.map((f) => (

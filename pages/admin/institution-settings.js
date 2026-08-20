@@ -12,6 +12,7 @@ export default function InstitutionSettings() {
   const [themeColor, setThemeColor] = useState("#7f1d1d");
   const [logoUrl, setLogoUrl] = useState(null);
   const [logoFile, setLogoFile] = useState(null);
+  const [teamsOrganizerEmail, setTeamsOrganizerEmail] = useState("");
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -21,6 +22,7 @@ export default function InstitutionSettings() {
       setInstitutionType(institution.institution_type || "training_provider");
       setThemeColor(institution.theme_color || "#7f1d1d");
       setLogoUrl(institution.logo_url || null);
+      setTeamsOrganizerEmail(institution.teams_organizer_email || "");
     }
   }, [institution]);
 
@@ -53,6 +55,7 @@ export default function InstitutionSettings() {
           institution_type: institutionType,
           theme_color: themeColor,
           logo_url: newLogoUrl,
+          teams_organizer_email: teamsOrganizerEmail,
         })
         .eq("id", institution.id);
 
@@ -150,6 +153,20 @@ export default function InstitutionSettings() {
               className="text-sm text-gray-600"
             />
           </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Teams Organizer Email</label>
+          <input
+            type="email"
+            value={teamsOrganizerEmail}
+            onChange={(e) => setTeamsOrganizerEmail(e.target.value)}
+            placeholder="scheduling@yourinstitution.com"
+            className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-gray-900 outline-none"
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            A real Microsoft 365 account with a Teams license. All meetings scheduled through the site will be created under this account.
+          </p>
         </div>
 
         <div className="pt-2 border-t border-gray-100">

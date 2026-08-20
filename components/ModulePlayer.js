@@ -54,10 +54,11 @@ const ResourceCard = ({ label, url }) => {
   );
 };
 
-const TeamsSession = ({ url, startDate }) => {
+const TeamsSession = ({ url, startDate, sessionDatetime }) => {
   const [micOn, setMicOn] = useState(true);
   const [camOn, setCamOn] = useState(true);
   const [hasPermission, setHasPermission] = useState(false);
+  const [countdown, setCountdown] = useState("");
   const videoRef = useRef(null);
 
   useEffect(() => {
@@ -72,12 +73,32 @@ const TeamsSession = ({ url, startDate }) => {
     }
   }, [camOn]);
 
+  useEffect(() => {
+    if (!sessionDatetime) return;
+    const target = new Date(sessionDatetime).getTime();
+    const tick = () => {
+      const diff = target - Date.now();
+      if (diff <= 0) { setCountdown("Session time has arrived"); return; }
+      const hrs = Math.floor(diff / 3600000);
+      const mins = Math.floor((diff % 3600000) / 60000);
+      setCountdown(`Starts in ${hrs}h ${mins}m`);
+    };
+    tick();
+    const interval = setInterval(tick, 30000);
+    return () => clearInterval(interval);
+  }, [sessionDatetime]);
+
   const dateStr = startDate ? new Date(startDate).toLocaleDateString() : "N/A";
 
   return (
     <div className="paper p-6 mb-4">
       <h2 className="font-display text-xl font-semibold mb-1" style={{ color: "var(--text)" }}>Microsoft Teams Meeting</h2>
-      <p className="text-sm text-gray-500 mb-4 font-mono">{dateStr}</p>
+      <p className="text-sm text-gray-500 mb-1 font-mono">{dateStr}</p>
+      {sessionDatetime && (
+        <p className="text-sm font-medium mb-4" style={{ color: "var(--seal-gold)" }}>
+          {new Date(sessionDatetime).toLocaleString()} - {countdown}
+        </p>
+      )}
       <div className="w-full h-56 rounded-xl mb-4 flex items-center justify-center overflow-hidden" style={{ background: "var(--paper-muted)" }}>
         {hasPermission && camOn ? (
           <video ref={videoRef} autoPlay muted playsInline className="w-full h-full object-cover" />
@@ -623,7 +644,11 @@ export default function ModulePlayer({ enrollmentId }) {
 
           {currentActivity === "teams" && (
             <>
-              <TeamsSession url={unitWeek?.video_url || unitWeek?.teams_session_link} startDate={unitWeek?.week_start_date} />
+              <TeamsSession
+                url={unitWeek?.video_url || unitWeek?.teams_session_link}
+                startDate={unitWeek?.week_start_date}
+                sessionDatetime={unitWeek?.session_datetime}
+              />
               <ResourceCard label="Open Teams / Video link" url={unitWeek?.video_url || unitWeek?.teams_session_link} />
             </>
           )}
