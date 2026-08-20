@@ -3,6 +3,7 @@
 import { useRouter } from "next/router";
 import { createClient } from "../../../lib/supabase/client";
 import Portal from "../../../components/Portal";
+import Whiteboard from "../../../components/Whiteboard";
 import { Plus, Pencil, Eye, Calendar, ArrowLeft } from "lucide-react";
 
 const FIELDS = [
@@ -57,9 +58,12 @@ export default function FacilitatorCoursePage() {
     if (id) fetchAll();
   }, [id, submissionFilter]);
 
+  const [facilitatorId, setFacilitatorId] = useState(null);
+
   const fetchAll = async () => {
     setLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
+    setFacilitatorId(user?.id || null);
 
     const { data: prog } = await supabase
       .from("programmes")
@@ -163,6 +167,9 @@ export default function FacilitatorCoursePage() {
     );
   }
 
+  const todayStr = new Date().toISOString().split("T")[0];
+  const currentWeek = weeks.find((w) => w.week_start_date <= todayStr && w.week_end_date >= todayStr);
+
   return (
     <div className="animate-fade-up">
       <button
@@ -203,6 +210,13 @@ export default function FacilitatorCoursePage() {
           style={tab === "messages" ? { background: "var(--brand-color)", color: "white" } : { background: "var(--paper)", border: "1px solid var(--border-soft)", color: "var(--text-muted)" }}
         >
           Messages
+        </button>
+        <button
+          onClick={() => setTab("whiteboard")}
+          className="px-4 py-2 rounded-lg text-sm font-medium"
+          style={tab === "whiteboard" ? { background: "var(--brand-color)", color: "white" } : { background: "var(--paper)", border: "1px solid var(--border-soft)", color: "var(--text-muted)" }}
+        >
+          Whiteboard
         </button>
       </div>
 
@@ -360,6 +374,14 @@ export default function FacilitatorCoursePage() {
 
       {tab === "messages" && (
         <FacilitatorMessages programme={programme} enrolledLearners={enrolledLearners} />
+      )}
+
+      {tab === "whiteboard" && (
+        currentWeek ? (
+          <Whiteboard unitWeekId={currentWeek.id} institutionId={programme.institution_id} userId={facilitatorId} canClear={true} />
+        ) : (
+          <div className="paper p-8 text-center text-gray-500 text-sm">No current week to open a whiteboard for.</div>
+        )
       )}
 
       {editingWeek && (

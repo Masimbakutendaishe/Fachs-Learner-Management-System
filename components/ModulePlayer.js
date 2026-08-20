@@ -4,6 +4,7 @@ import { useRouter } from "next/router";
 import { createClient } from "../lib/supabase/client";
 import { useAuth } from "../pages/context/AuthContext";
 import SealProgress from "./SealProgress";
+import Whiteboard from "./Whiteboard";
 import { MessageCircle, Video as VideoIcon, Cpu, Mic, MicOff, Video as Cam, VideoOff, ChevronLeft, ChevronRight } from "lucide-react";
 
 const ACTIVITY_LABELS = {
@@ -453,6 +454,7 @@ export default function ModulePlayer({ enrollmentId }) {
   const alwaysAccessible = [
     { key: "chat", label: "Chat with facilitators", icon: <MessageCircle size={20} /> },
     { key: "teams", label: "Join Teams Session", icon: <VideoIcon size={20} /> },
+    { key: "whiteboard", label: "Whiteboard", icon: <span className="font-mono text-xs">WB</span> },
     { key: "ai", label: "Ask Fachs AI", icon: <Cpu size={20} /> },
     { key: "grades", label: "My Grades", icon: <SealProgress percent={0} size={18} /> },
   ];
@@ -695,6 +697,9 @@ export default function ModulePlayer({ enrollmentId }) {
 
           {currentActivity === "grades" && <GradesPanel submissions={mySubmissions} />}
           {currentActivity === "chat" && <ChatPanel enrollment={enrollment} />}
+          {currentActivity === "whiteboard" && (
+            <Whiteboard unitWeekId={unitWeek?.id} institutionId={enrollment.institution_id} userId={enrollment.user_id} canClear={false} />
+          )}
 
           {!currentActivity && (
             <div className="paper p-8 text-center text-gray-500 text-sm">Select an activity from the sidebar or dropdown to get started.</div>
