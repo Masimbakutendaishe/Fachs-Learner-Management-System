@@ -661,6 +661,26 @@ function WeekModal({ week, onClose, onSaved }) {
     }
   };
 
+  const [generatingFor, setGeneratingFor] = useState(null);
+
+  const generateFromPdf = async (activityKey, fileUrl) => {
+    setGeneratingFor(activityKey);
+    try {
+      const res = await fetch("/api/generate-questions-from-pdf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fileUrl, activityType: activityKey }),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      setQuestions((prev) => ({ ...prev, [activityKey]: [...(prev[activityKey] || []), ...data.questions] }));
+    } catch (err) {
+      alert("Could not generate questions: " + err.message);
+    } finally {
+      setGeneratingFor(null);
+    }
+  };
+
   const addQuestion = (activityKey) => {
     const text = newQuestionText[activityKey]?.trim();
     if (!text) return;
@@ -818,7 +838,25 @@ function WeekModal({ week, onClose, onSaved }) {
 
             {["workbook", "knowledge", "summative", "practical"].map((activityKey) => (
               <div key={activityKey} className="pt-2 border-t" style={{ borderColor: "var(--border-soft)" }}>
-                <label className="block text-xs text-[var(--text-muted)] mb-1 capitalize">{activityKey} Questions</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs text-[var(--text-muted)] capitalize">{activityKey} Questions</label>
+                  {!readOnly && (() => {
+                    const urlKey = activityKey === "workbook" ? "learner_workbook_url" : activityKey === "knowledge" ? "knowledge_module_url" : activityKey === "summative" ? "summative_assessment_url" : null;
+                    const fileUrl = urlKey ? form[urlKey] : null;
+                    if (!fileUrl) return null;
+                    return (
+                      <button
+                        type="button"
+                        onClick={() => generateFromPdf(activityKey, fileUrl)}
+                        disabled={generatingFor === activityKey}
+                        className="text-xs font-medium disabled:opacity-50"
+                        style={{ color: "var(--seal-gold)" }}
+                      >
+                        {generatingFor === activityKey ? "Generating..." : "Generate from PDF"}
+                      </button>
+                    );
+                  })()}
+                </div>
                 {readOnly ? (
                   (questions[activityKey] || []).length === 0 ? (
                     <span className="text-xs text-gray-400">No questions set</span>
