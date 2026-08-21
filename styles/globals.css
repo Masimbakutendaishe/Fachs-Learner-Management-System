@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 :root {
-  --brand-color: #2F5FE0;
+  --brand-color: #52525B;
   --shell: #F4F5F7;
   --surface: #FFFFFF;
   --border-soft: rgba(16, 24, 40, 0.08);
@@ -15,15 +15,96 @@
   --seal-gold-soft: rgba(184, 135, 59, 0.12);
 }
 
+.navbar-silver {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #71717A 0%, #4B5563 45%, #63636B 55%, #71717A 100%);
+  background-size: 220% 220%;
+  animation: silver-shift 7s ease-in-out infinite;
+}
+
+.btn-silver {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #71717A 0%, #52525B 45%, #63636B 55%, #71717A 100%);
+  background-size: 220% 220%;
+  animation: silver-shift 7s ease-in-out infinite;
+  color: white;
+}
+
+.btn-silver::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -60%;
+  width: 40%;
+  height: 100%;
+  background: linear-gradient(120deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+  transform: skewX(-20deg);
+  animation: silver-sweep 5s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn-silver, .btn-silver::after {
+    animation: none !important;
+  }
+}
+
+.navbar-silver::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -60%;
+  width: 40%;
+  height: 100%;
+  background: linear-gradient(120deg, transparent, rgba(255, 255, 255, 0.6), transparent);
+  transform: skewX(-20deg);
+  animation: silver-sweep 5s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes silver-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+@keyframes silver-sweep {
+  0% { left: -60%; }
+  55%, 100% { left: 130%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .navbar-silver, .navbar-silver::after {
+    animation: none !important;
+  }
+}
+
 * {
   box-sizing: border-box;
 }
 
 body {
-  background: var(--shell);
+  background:
+    radial-gradient(ellipse 900px 500px at 15% -5%, rgba(255, 255, 255, 0.9), transparent 55%),
+    radial-gradient(ellipse 800px 600px at 90% 15%, rgba(156, 163, 175, 0.16), transparent 60%),
+    radial-gradient(ellipse 700px 500px at 20% 90%, rgba(156, 163, 175, 0.10), transparent 55%),
+    var(--shell);
+  background-attachment: fixed;
   color: var(--text);
   font-family: 'Inter', system-ui, sans-serif;
   min-height: 100vh;
+  position: relative;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: 0.025;
+  pointer-events: none;
+  z-index: 0;
 }
 
 h1, h2, h3, h4, .font-display {

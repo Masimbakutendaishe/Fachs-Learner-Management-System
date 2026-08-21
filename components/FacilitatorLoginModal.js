@@ -130,7 +130,7 @@ export default function FacilitatorLoginModal({ isOpen, onClose, onSwitchToLearn
         <form onSubmit={handleAuth} className="space-y-3">
           {isSignUp && (
             <>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <input
                   type="text" placeholder="First Name" value={firstName}
                   onChange={(e) => setFirstName(e.target.value)} required
@@ -206,8 +206,7 @@ export default function FacilitatorLoginModal({ isOpen, onClose, onSwitchToLearn
 
           <button
             type="submit" disabled={submitting}
-            className="w-full py-3 mt-2 rounded-xl text-white font-medium transition-all hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{ background: "var(--brand-color)" }}
+            className="btn-silver w-full py-3 mt-2 rounded-xl font-medium transition-all hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {submitting ? "Please wait..." : isSignUp ? "Create Account" : "Sign In"}
           </button>

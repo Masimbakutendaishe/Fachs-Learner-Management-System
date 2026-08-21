@@ -142,7 +142,7 @@ export default function InstitutionSettings() {
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Logo</label>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 flex-wrap">
             {logoUrl && (
               <img src={logoUrl} alt="Current logo" className="h-12 w-auto object-contain rounded border border-gray-100 p-1" />
             )}

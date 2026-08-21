@@ -210,7 +210,7 @@ export default function AuthModal({ isOpen, onClose, onSelectQualification, mode
         <form onSubmit={handleSubmit} className="space-y-3">
           {mode === "signup" && (
             <>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 gap-3">
                 <input
                   type="text" placeholder="First Name" value={firstName}
                   onChange={(e) => setFirstName(e.target.value)} required
@@ -263,8 +263,7 @@ export default function AuthModal({ isOpen, onClose, onSelectQualification, mode
 
           <button
             type="submit" disabled={submitting}
-            className="w-full py-3 mt-2 rounded-xl text-white font-medium transition-all hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{ background: "var(--brand-color)" }}
+            className="btn-silver w-full py-3 mt-2 rounded-xl font-medium transition-all hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {submitting ? "Please wait..." : mode === "signup" ? "Sign Up" : "Sign In"}
           </button>

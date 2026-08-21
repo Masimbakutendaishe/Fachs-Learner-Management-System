@@ -120,7 +120,7 @@ export default function MobileNavbar() {
                 )}
               </button>
               {showNotifs && (
-                <div className="absolute right-0 mt-2 w-80 max-w-[90vw] max-h-96 overflow-y-auto rounded-xl shadow-2xl border z-50" style={{ background: "var(--surface)", borderColor: "var(--border-soft)" }}>
+                <div className="absolute right-0 mt-2 w-80 max-w-[90vw] max-h-96 overflow-y-auto rounded-xl shadow-2xl border z-50" style={{ background: "var(--surface)", borderColor: "var(--border-soft)", "--text": "#101828", "--text-muted": "#667085" }}>
                   {notifications.length === 0 ? (
                     <p className="p-4 text-sm text-[var(--text-muted)] text-center">No notifications yet.</p>
                   ) : (
@@ -229,7 +229,7 @@ export default function MobileNavbar() {
               key={item.name}
               href={item.href}
               onClick={() => setIsOpen(false)}
-              className="block px-3 py-2.5 rounded-lg text-sm text-[var(--text-muted)] hover:text-white hover:bg-black/5 transition-colors"
+              className="block px-3 py-2.5 rounded-lg text-sm text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-black/5 transition-colors"
             >
               {item.name}
             </Link>
@@ -244,7 +244,7 @@ export default function MobileNavbar() {
                   "/dashboard"
                 }
                 onClick={() => setIsOpen(false)}
-                className="block px-3 py-2.5 rounded-lg text-sm text-[var(--text-muted)] hover:text-white hover:bg-black/5 transition-colors"
+                className="block px-3 py-2.5 rounded-lg text-sm text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-black/5 transition-colors"
               >
                 Dashboard
               </Link>
@@ -257,7 +257,7 @@ export default function MobileNavbar() {
               <button onClick={handleLoginClick} className="block w-full text-left px-3 py-2.5 rounded-lg text-sm font-medium" style={{ background: "var(--brand-color)" }}>
                 Sign In
               </button>
-              <button onClick={handleFacilitatorClick} className="block w-full text-left px-3 py-2.5 rounded-lg text-sm text-[var(--text-muted)] hover:text-white hover:bg-black/5 transition-colors">
+              <button onClick={handleFacilitatorClick} className="block w-full text-left px-3 py-2.5 rounded-lg text-sm text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-black/5 transition-colors">
                 Institutions & Staff
               </button>
             </>

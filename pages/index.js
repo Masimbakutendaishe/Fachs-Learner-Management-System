@@ -65,8 +65,7 @@ export default function Home() {
         {!sessionUser && (
           <div className="flex items-center justify-center gap-3 mb-8">
             <Button
-              className="text-white font-medium px-6 py-3 rounded-xl transition-all hover:brightness-110"
-              style={{ background: "var(--brand-color)" }}
+              className="btn-silver font-medium px-6 py-3 rounded-xl transition-all hover:brightness-110"
               onClick={() => openModal("signup")}
             >
               Get Started
@@ -175,8 +174,7 @@ export default function Home() {
       {/* Floating Chat Button */}
       <button
         onClick={() => setIsChatOpen(true)}
-        className="fixed bottom-6 left-6 z-40 md:z-50 text-white font-medium px-4 md:px-5 py-2 md:py-3 rounded-full flex items-center space-x-2 shadow-lg hover:scale-105 hover:shadow-xl transition max-w-[90%] md:max-w-[300px]"
-        style={{ background: "var(--brand-color)" }}
+        className="btn-silver fixed bottom-6 left-6 z-40 md:z-50 font-medium px-4 md:px-5 py-2 md:py-3 rounded-full flex items-center space-x-2 shadow-lg hover:scale-105 hover:shadow-xl transition max-w-[90%] md:max-w-[300px]"
       >
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 md:w-6 md:h-6">
           <path strokeLinecap="round" strokeLinejoin="round" d="M7 8h10M7 12h4m1 8c-4.418 0-8-3.134-8-7s3.582-7 8-7 8 3.134 8 7c0 1.386-.39 2.685-1.07 3.77L21 20l-4.26-1.705A7.963 7.963 0 0113 20z" />
