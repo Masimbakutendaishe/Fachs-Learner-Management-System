@@ -603,7 +603,7 @@ export default function ModulePlayer({ enrollmentId }) {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr] gap-6">
-        <aside className="paper p-4 h-fit lg:sticky lg:top-24">
+        <aside className="hidden lg:block paper p-4 h-fit lg:sticky lg:top-24">
           <p className="text-xs font-mono text-gray-400 mb-3 px-1">THIS WEEK</p>
           <ul className="space-y-1">
             {activities.map((a) => {

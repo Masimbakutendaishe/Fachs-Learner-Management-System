@@ -120,7 +120,7 @@ export default function MobileNavbar() {
                 )}
               </button>
               {showNotifs && (
-                <div className="absolute right-0 mt-2 w-80 max-h-96 overflow-y-auto rounded-xl shadow-2xl border z-50" style={{ background: "var(--surface)", borderColor: "var(--border-soft)" }}>
+                <div className="absolute right-0 mt-2 w-80 max-w-[90vw] max-h-96 overflow-y-auto rounded-xl shadow-2xl border z-50" style={{ background: "var(--surface)", borderColor: "var(--border-soft)" }}>
                   {notifications.length === 0 ? (
                     <p className="p-4 text-sm text-[var(--text-muted)] text-center">No notifications yet.</p>
                   ) : (

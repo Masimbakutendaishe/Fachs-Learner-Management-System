@@ -76,7 +76,7 @@ export default function FeesPage() {
       ) : invoices.length === 0 ? (
         <div className="paper p-8 text-center text-gray-500 text-sm">No invoices {filter !== "all" ? filter : ""} yet.</div>
       ) : (
-        <div className="paper overflow-hidden">
+        <div className="paper overflow-hidden overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left border-b" style={{ borderColor: "var(--border-soft)" }}>
