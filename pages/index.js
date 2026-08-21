@@ -33,7 +33,26 @@ export default function Home() {
   }, [supabase]);
 
   return (
-    <div className="w-full">
+    <div
+      className="w-full"
+      style={{
+        backgroundImage: `linear-gradient(rgba(244,244,245,0.88), rgba(244,244,245,0.88)), url('/lmsimg.jpg')`,
+        backgroundSize: "cover",
+        backgroundPosition: "center top",
+        backgroundAttachment: "fixed",
+        marginLeft: "calc(-50vw + 50%)",
+        marginRight: "calc(-50vw + 50%)",
+        marginTop: "-2rem",
+        marginBottom: "-2rem",
+        width: "100vw",
+        paddingLeft: "calc(50vw - 50%)",
+        paddingRight: "calc(50vw - 50%)",
+        paddingTop: "2rem",
+        paddingBottom: "2rem",
+        position: "relative",
+        zIndex: 0,
+      }}
+    >
       <Head>
         <title>Fachs LMS – Learning Platform for Institutions</title>
         <meta

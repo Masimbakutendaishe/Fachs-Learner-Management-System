@@ -86,10 +86,10 @@
 
 body {
   background:
-    radial-gradient(ellipse 900px 500px at 15% -5%, rgba(255, 255, 255, 0.9), transparent 55%),
-    radial-gradient(ellipse 800px 600px at 90% 15%, rgba(156, 163, 175, 0.16), transparent 60%),
-    radial-gradient(ellipse 700px 500px at 20% 90%, rgba(156, 163, 175, 0.10), transparent 55%),
-    var(--shell);
+    radial-gradient(ellipse 1000px 600px at 8% -10%, rgba(255, 255, 255, 0.95), transparent 50%),
+    radial-gradient(ellipse 900px 700px at 95% 10%, rgba(113, 113, 122, 0.35), transparent 55%),
+    radial-gradient(ellipse 800px 600px at 15% 95%, rgba(113, 113, 122, 0.28), transparent 55%),
+    linear-gradient(160deg, #FAFAFA 0%, #E4E4E7 35%, #F4F4F5 55%, #D4D4D8 80%, #F4F4F5 100%);
   background-attachment: fixed;
   color: var(--text);
   font-family: 'Inter', system-ui, sans-serif;
@@ -102,7 +102,7 @@ body::before {
   position: fixed;
   inset: 0;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  opacity: 0.025;
+  opacity: 0.07;
   pointer-events: none;
   z-index: 0;
 }
