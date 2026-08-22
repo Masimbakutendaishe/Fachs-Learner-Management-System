@@ -76,8 +76,8 @@ export default function QualificationModulesPage() {
       <h1 className="font-display text-3xl font-semibold mb-1" style={{ color: "var(--text)" }}>{programme.name}</h1>
       <p className="text-sm text-gray-500 mb-6 capitalize">{programme.qualification_type?.replace("_", " ")}</p>
 
-      <div className="flex justify-center mb-6">
-        <div className="paper p-1.5 flex gap-1 rounded-2xl">
+        <div className="flex justify-center mb-6">
+        <div className="paper p-1.5 flex gap-1 rounded-2xl flex-wrap justify-center">
           {Object.keys(MODULE_LABELS).map((key) => (
             <button
               key={key}
@@ -88,11 +88,33 @@ export default function QualificationModulesPage() {
               {MODULE_LABELS[key]}
             </button>
           ))}
+          {(programme.qualification_type === "full" || programme.qualification_type === "part") && (
+            <button
+              onClick={() => setActiveModule("isa")}
+              className="px-4 py-2 rounded-xl text-sm font-medium transition-all"
+              style={activeModule === "isa" ? { background: "var(--brand-color)", color: "white" } : { color: "var(--text-muted)" }}
+            >
+              ISA Criteria
+            </button>
+          )}
+          {programme.qualification_type === "skills_programme" && (
+            <button
+              onClick={() => setActiveModule("fisa")}
+              className="px-4 py-2 rounded-xl text-sm font-medium transition-all"
+              style={activeModule === "fisa" ? { background: "var(--brand-color)", color: "white" } : { color: "var(--text-muted)" }}
+            >
+              FISA
+            </button>
+          )}
         </div>
       </div>
 
       {activeModule === "workplace" ? (
         <WorkplaceLogbookReview entries={logbookEntries} module={modules.workplace} programme={programme} onSignOff={signOffEntry} onGuideUpdated={fetchAll} />
+      ) : activeModule === "isa" ? (
+        <IsaCriteriaEditor programme={programme} />
+      ) : activeModule === "fisa" ? (
+        <FisaEditor programme={programme} />
       ) : (
         <ModuleEditor
           key={activeModule}
@@ -296,10 +318,170 @@ function ModuleEditor({ module, moduleType, programme, onSaved }) {
         {saving ? "Saving..." : "Save Module"}
       </button>
     </div>
+const MODULE_LABELS_INLINE = MODULE_LABELS;
+
+function IsaCriteriaEditor({ programme }) {
+  const supabase = createClient();
+  const [criteria, setCriteria] = useState([]);
+  const [newCriterion, setNewCriterion] = useState("");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchCriteria();
+  }, []);
+
+  const fetchCriteria = async () => {
+    setLoading(true);
+    const { data } = await supabase
+      .from("qualification_isa_criteria")
+      .select("*")
+      .eq("programme_id", programme.id)
+      .order("sort_order");
+    setCriteria(data || []);
+    setLoading(false);
+  };
+
+  const addCriterion = async () => {
+    if (!newCriterion.trim()) return;
+    const { error } = await supabase.from("qualification_isa_criteria").insert({
+      programme_id: programme.id,
+      institution_id: programme.institution_id,
+      criterion_text: newCriterion,
+      sort_order: criteria.length,
+    });
+    if (error) return alert(error.message);
+    setNewCriterion("");
+    fetchCriteria();
+  };
+
+  const removeCriterion = async (id) => {
+    const { error } = await supabase.from("qualification_isa_criteria").delete().eq("id", id);
+    if (error) alert(error.message);
+    else fetchCriteria();
+  };
+
+  if (loading) return <p className="text-sm font-mono text-[var(--text-muted)]">Loading...</p>;
+
+  return (
+    <div className="paper p-6 space-y-3">
+      <h2 className="font-display font-semibold" style={{ color: "var(--text)" }}>ISA Criteria</h2>
+      <p className="text-sm text-gray-500">
+        The checklist tied to this qualification's Knowledge, Practical, and Workplace requirements. You'll tick these off per learner as they meet each one.
+      </p>
+      {criteria.length === 0 ? (
+        <p className="text-xs text-gray-400">No criteria added yet.</p>
+      ) : (
+        <ul className="space-y-2">
+          {criteria.map((c) => (
+            <li key={c.id} className="flex items-center justify-between gap-2 text-sm p-3 rounded-lg" style={{ background: "var(--paper-muted)" }}>
+              <span className="text-gray-700">{c.criterion_text}</span>
+              <button onClick={() => removeCriterion(c.id)} className="text-xs text-red-500 hover:underline flex-shrink-0">Remove</button>
+            </li>
+          ))}
+        </ul>
+      )}
+      <div className="flex gap-2 pt-2">
+        <input
+          type="text" placeholder="e.g. Learner demonstrates correct use of PPE"
+          value={newCriterion} onChange={(e) => setNewCriterion(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && addCriterion()}
+          className="flex-1 px-3 py-2 rounded-lg border text-sm" style={{ borderColor: "var(--border-soft)" }}
+        />
+        <button onClick={addCriterion} className="px-3 py-2 rounded-lg text-sm font-medium" style={{ border: "1px solid var(--border-soft)", color: "var(--text)" }}>Add</button>
+      </div>
+    </div>
   );
 }
 
-const MODULE_LABELS_INLINE = MODULE_LABELS;
+function FisaEditor({ programme }) {
+  const supabase = createClient();
+  const [fisa, setFisa] = useState(null);
+  const [questions, setQuestions] = useState([]);
+  const [duration, setDuration] = useState("");
+  const [invigilated, setInvigilated] = useState(false);
+  const [newQ, setNewQ] = useState({ text: "", marks: "" });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    fetchFisa();
+  }, []);
+
+  const fetchFisa = async () => {
+    setLoading(true);
+    const { data } = await supabase.from("qualification_fisa").select("*").eq("programme_id", programme.id).single();
+    setFisa(data);
+    setQuestions(data?.questions || []);
+    setDuration(data?.duration_minutes ?? "");
+    setInvigilated(data?.invigilated || false);
+    setLoading(false);
+  };
+
+  const addQuestion = () => {
+    if (!newQ.text.trim()) return;
+    setQuestions((prev) => [...prev, { text: newQ.text, marks: newQ.marks ? Number(newQ.marks) : null, type: "free", media: null, options: [] }]);
+    setNewQ({ text: "", marks: "" });
+  };
+
+  const removeQuestion = (i) => setQuestions((prev) => prev.filter((_, idx) => idx !== i));
+
+  const handleSave = async () => {
+    setSaving(true);
+    const { error } = await supabase
+      .from("qualification_fisa")
+      .update({ questions, duration_minutes: duration ? Number(duration) : null, invigilated })
+      .eq("id", fisa.id);
+    if (error) alert(error.message);
+    else alert("FISA saved.");
+    setSaving(false);
+  };
+
+  const inputClass = "w-full px-3 py-2 rounded-lg border text-sm";
+
+  if (loading) return <p className="text-sm font-mono text-[var(--text-muted)]">Loading...</p>;
+  if (!fisa) return <div className="paper p-8 text-center text-gray-500 text-sm">No FISA record found for this qualification.</div>;
+
+  return (
+    <div className="space-y-4">
+      <div className="paper p-6 space-y-3">
+        <h2 className="font-display font-semibold" style={{ color: "var(--text)" }}>Final Integrated Summative Assessment</h2>
+        <p className="text-sm text-gray-500">The final exam integrating all modules for this Skills Programme.</p>
+        <div className="flex items-center gap-4 flex-wrap">
+          <div>
+            <label className="block text-xs text-[var(--text-muted)] mb-1">Duration (minutes)</label>
+            <input type="number" value={duration} onChange={(e) => setDuration(e.target.value)} className="w-32 px-3 py-2 rounded-lg border text-sm" style={{ borderColor: "var(--border-soft)" }} />
+          </div>
+          <label className="flex items-center gap-2 text-sm text-gray-600 mt-5">
+            <input type="checkbox" checked={invigilated} onChange={(e) => setInvigilated(e.target.checked)} /> Invigilated
+          </label>
+        </div>
+      </div>
+
+      <div className="paper p-6 space-y-3">
+        <h2 className="font-display font-semibold" style={{ color: "var(--text)" }}>Questions</h2>
+        {questions.length > 0 && (
+          <ul className="space-y-2">
+            {questions.map((q, i) => (
+              <li key={i} className="flex items-center justify-between gap-2 text-sm p-3 rounded-lg" style={{ background: "var(--paper-muted)" }}>
+                <span className="text-gray-700">{i + 1}. {q.text} {q.marks != null && <span className="text-gray-400">({q.marks} marks)</span>}</span>
+                <button onClick={() => removeQuestion(i)} className="text-xs text-red-500 hover:underline flex-shrink-0">Remove</button>
+              </li>
+            ))}
+          </ul>
+        )}
+        <div className="flex gap-2">
+          <input type="text" placeholder="Question text" value={newQ.text} onChange={(e) => setNewQ((p) => ({ ...p, text: e.target.value }))} className={`${inputClass} flex-1`} style={{ borderColor: "var(--border-soft)" }} />
+          <input type="number" placeholder="Marks" value={newQ.marks} onChange={(e) => setNewQ((p) => ({ ...p, marks: e.target.value }))} className={`${inputClass} w-24`} style={{ borderColor: "var(--border-soft)" }} />
+          <button onClick={addQuestion} className="px-3 py-2 rounded-lg text-sm font-medium" style={{ border: "1px solid var(--border-soft)", color: "var(--text)" }}>Add</button>
+        </div>
+      </div>
+
+      <button onClick={handleSave} disabled={saving} className="btn-silver w-full py-2.5 rounded-lg text-sm font-medium disabled:opacity-50">
+        {saving ? "Saving..." : "Save FISA"}
+      </button>
+    </div>
+  );
+}
 
 function WorkplaceLogbookReview({ entries, module, programme, onSignOff, onGuideUpdated }) {
   const supabase = createClient();

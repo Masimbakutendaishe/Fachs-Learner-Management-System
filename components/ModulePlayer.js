@@ -493,6 +493,100 @@ const ResourcesPanel = ({ unitWeek }) => {
   );
 };
 
+const LogbookPanel = ({ enrollment }) => {
+  const supabase = createClient();
+  const [entries, setEntries] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [entryDate, setEntryDate] = useState(new Date().toISOString().split("T")[0]);
+  const [description, setDescription] = useState("");
+  const [proofFile, setProofFile] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    fetchEntries();
+  }, []);
+
+  const fetchEntries = async () => {
+    const { data } = await supabase
+      .from("logbook_entries")
+      .select("*")
+      .eq("enrollment_id", enrollment.id)
+      .order("entry_date", { ascending: false });
+    setEntries(data || []);
+    setLoading(false);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      let proofUrl = null;
+      if (proofFile) {
+        const path = `${enrollment.id}/logbook_${Date.now()}_${proofFile.name}`;
+        const { error: uploadError } = await supabase.storage.from("submissions").upload(path, proofFile);
+        if (uploadError) throw uploadError;
+        proofUrl = path;
+      }
+      const { error } = await supabase.from("logbook_entries").insert({
+        enrollment_id: enrollment.id,
+        programme_id: enrollment.programme_id,
+        institution_id: enrollment.institution_id,
+        user_id: enrollment.user_id,
+        entry_date: entryDate,
+        description,
+        proof_url: proofUrl,
+      });
+      if (error) throw error;
+      setDescription("");
+      setProofFile(null);
+      fetchEntries();
+    } catch (err) {
+      alert("Could not save logbook entry: " + err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="paper p-6">
+        <h2 className="font-display text-xl font-semibold mb-4" style={{ color: "var(--text)" }}>Add Logbook Entry</h2>
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <input type="date" value={entryDate} onChange={(e) => setEntryDate(e.target.value)} required className="w-full px-3 py-2 rounded-lg border text-sm" style={{ borderColor: "var(--border-soft)" }} />
+          <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What did you do?" required rows={3} className="w-full px-3 py-2 rounded-lg border text-sm" style={{ borderColor: "var(--border-soft)" }} />
+          <input type="file" onChange={(e) => setProofFile(e.target.files[0])} className="text-sm text-gray-500" />
+          <button type="submit" disabled={submitting} className="btn-silver w-full py-2.5 rounded-lg text-sm font-medium disabled:opacity-50">
+            {submitting ? "Saving..." : "Add Entry"}
+          </button>
+        </form>
+      </div>
+
+      <div className="paper p-6">
+        <h2 className="font-display text-lg font-semibold mb-3" style={{ color: "var(--text)" }}>My Entries</h2>
+        {loading ? (
+          <p className="text-sm text-gray-400">Loading...</p>
+        ) : entries.length === 0 ? (
+          <p className="text-sm text-gray-400">No entries yet.</p>
+        ) : (
+          <ul className="space-y-2">
+            {entries.map((e) => (
+              <li key={e.id} className="p-3 rounded-lg text-sm" style={{ background: "var(--paper-muted)" }}>
+                <div className="flex items-center justify-between">
+                  <span className="font-mono text-xs text-gray-400">{new Date(e.entry_date).toLocaleDateString()}</span>
+                  <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={e.signed_off ? { background: "#ECFDF5", color: "#047857" } : { background: "var(--seal-gold-soft)", color: "var(--seal-gold)" }}>
+                    {e.signed_off ? "Signed off" : "Pending sign-off"}
+                  </span>
+                </div>
+                <p className="text-gray-700 mt-1">{e.description}</p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+};
+
 const ChatPanel = ({ enrollment }) => {
   const supabase = createClient();
   const [messages, setMessages] = useState([]);
@@ -635,7 +729,8 @@ export default function ModulePlayer({ enrollmentId }) {
     { key: "teams", label: "Join Teams Session", icon: <VideoIcon size={20} /> },
     { key: "whiteboard", label: "Whiteboard", icon: <span className="font-mono text-xs">WB</span> },
     { key: "ai", label: "Ask Fachs AI", icon: <Cpu size={20} /> },
-    { key: "grades", label: "My Grades", icon: <SealProgress percent={0} size={18} /> },
+        { key: "grades", label: "My Grades", icon: <SealProgress percent={0} size={18} /> },
+    { key: "logbook", label: "Logbook", icon: <span className="font-mono text-xs">LB</span> },
   ];
 
   useEffect(() => {
@@ -878,7 +973,8 @@ export default function ModulePlayer({ enrollmentId }) {
           )}
 
           {currentActivity === "grades" && <GradesPanel submissions={mySubmissions} />}
-          {currentActivity === "chat" && <ChatPanel enrollment={enrollment} />}
+                    {currentActivity === "chat" && <ChatPanel enrollment={enrollment} />}
+          {currentActivity === "logbook" && <LogbookPanel enrollment={enrollment} />}
           {currentActivity === "whiteboard" && (
             <Whiteboard unitWeekId={unitWeek?.id} institutionId={enrollment.institution_id} userId={enrollment.user_id} canClear={false} />
           )}
