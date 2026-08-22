@@ -972,36 +972,7 @@ function WeekModal({ week, onClose, onSaved }) {
     }
   };
 
-                  {!readOnly && (
-                  <div className="flex gap-2 mt-2">
-                    <button
-                      type="button"
-                      disabled={!form.session_datetime || schedulingMeeting}
-                      onClick={handleScheduleTeamsMeeting}
-                      className="px-3 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
-                      style={{ border: "1px solid var(--border-soft)", color: "var(--text)" }}
-                    >
-                      {schedulingMeeting ? "Working..." : "Schedule Teams Meeting"}
-                    </button>
-                    <button
-                      type="button"
-                      disabled={schedulingMeeting}
-                      onClick={handleCreateDailyRoom}
-                      className="px-3 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
-                      style={{ border: "1px solid var(--border-soft)", color: "var(--text)" }}
-                    >
-                      {schedulingMeeting ? "Working..." : "Create In-Platform Video Room"}
-                    </button>
-                  </div>
-                )}
-                {form.teams_session_link && (
-                  <p className="text-xs mt-1" style={{ color: "var(--seal-gold)" }}>Teams meeting link ready</p>
-                )}
-                {form.daily_room_url && (
-                  <p className="text-xs mt-1" style={{ color: "var(--seal-gold)" }}>In-platform video room ready</p>
-                )}
-              </div>
-            )}
+  const handleScheduleTeamsMeeting = async () => {
     setSchedulingMeeting(true);
     try {
       const start = new Date(form.session_datetime);
@@ -1272,19 +1243,33 @@ function WeekModal({ week, onClose, onSaved }) {
                   onChange={(e) => handleFieldChange("session_datetime", e.target.value)}
                   disabled={readOnly} className={inputClass} style={{ borderColor: "var(--border-soft)" }}
                 />
-                {!readOnly && (
-                  <button
-                    type="button"
-                    disabled={!form.session_datetime || schedulingMeeting}
-                    onClick={handleScheduleTeamsMeeting}
-                    className="mt-2 px-3 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
-                    style={{ border: "1px solid var(--border-soft)", color: "var(--text)" }}
-                  >
-                    {schedulingMeeting ? "Scheduling..." : "Schedule Teams Meeting"}
-                  </button>
+                                {!readOnly && (
+                  <div className="flex gap-2 mt-2">
+                    <button
+                      type="button"
+                      disabled={!form.session_datetime || schedulingMeeting}
+                      onClick={handleScheduleTeamsMeeting}
+                      className="px-3 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
+                      style={{ border: "1px solid var(--border-soft)", color: "var(--text)" }}
+                    >
+                      {schedulingMeeting ? "Working..." : "Schedule Teams Meeting"}
+                    </button>
+                                        <button
+                      type="button"
+                      disabled={!form.session_datetime || schedulingMeeting}
+                      onClick={handleCreateDailyRoom}
+                      className="px-3 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
+                      style={{ border: "1px solid var(--border-soft)", color: "var(--text)" }}
+                    >
+                      {schedulingMeeting ? "Working..." : "Create In-Platform Video Room"}
+                    </button>
+                  </div>
                 )}
                 {form.teams_session_link && (
-                  <p className="text-xs mt-1" style={{ color: "var(--seal-gold)" }}>Meeting link ready</p>
+                  <p className="text-xs mt-1" style={{ color: "var(--seal-gold)" }}>Teams meeting link ready</p>
+                )}
+                {form.daily_room_url && (
+                  <p className="text-xs mt-1" style={{ color: "var(--seal-gold)" }}>In-platform video room ready</p>
                 )}
               </div>
             )}

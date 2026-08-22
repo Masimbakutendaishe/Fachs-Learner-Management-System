@@ -1,5 +1,8 @@
 {
   "/_app": "pages/_app.js",
+  "/_error": "pages/_error.js",
   "/_document": "pages/_document.js",
-  "/_error": "pages/_error.js"
+  "/api/generate-chapters-from-pdf": "pages/api/generate-chapters-from-pdf.js",
+  "/module-player/facilitator/[id]": "pages/module-player/facilitator/[id].js",
+  "/facilitator/dashboard": "pages/facilitator/dashboard.js"
 }

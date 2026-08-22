@@ -4,8 +4,10 @@ export default async function handler(req, res) {
   const { weekTitle, sessionDatetime } = req.body;
 
   try {
-    const exp = sessionDatetime
-      ? Math.floor(new Date(sessionDatetime).getTime() / 1000) + 60 * 60 * 4
+        const parsedDate = sessionDatetime ? new Date(sessionDatetime) : null;
+    const isValidDate = parsedDate && !isNaN(parsedDate.getTime());
+    const exp = isValidDate
+      ? Math.floor(parsedDate.getTime() / 1000) + 60 * 60 * 4
       : Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7;
 
     const roomRes = await fetch("https://api.daily.co/v1/rooms", {
