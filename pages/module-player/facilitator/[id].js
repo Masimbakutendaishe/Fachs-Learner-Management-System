@@ -5,6 +5,7 @@ import { createClient } from "../../../lib/supabase/client";
 import Portal from "../../../components/Portal";
 import Whiteboard from "../../../components/Whiteboard";
 import Link from "next/link";
+import QualificationModulesTab from "../../../components/QualificationModulesTab";
 import { Plus, Pencil, Eye, Calendar, ArrowLeft } from "lucide-react";
 
 const FIELDS = [
@@ -54,6 +55,7 @@ export default function FacilitatorCoursePage() {
   const [editingWeek, setEditingWeek] = useState(null);
   const [generatingOpen, setGeneratingOpen] = useState(false);
   const [submissionFilter, setSubmissionFilter] = useState("submitted");
+  const [viewByLearner, setViewByLearner] = useState(false);
 
   useEffect(() => {
     if (id) fetchAll();
@@ -180,17 +182,13 @@ export default function FacilitatorCoursePage() {
         <ArrowLeft size={16} /> Back to dashboard
       </button>
 
-      <p className="text-xs font-mono text-[var(--text-muted)] mb-1">FACILITATOR</p>
-            <div className="flex items-center justify-between gap-3 mb-6 flex-wrap">
-        <h1 className="font-display text-3xl font-semibold" style={{ color: "var(--text)" }}>{programme.name}</h1>
-        <Link href={`/module-player/facilitator/${id}/modules`} className="px-4 py-2 rounded-lg text-sm font-medium" style={{ border: "1px solid var(--border-soft)", color: "var(--text)" }}>
-          Qualification Modules
-        </Link>
-      </div>
+            <p className="text-xs font-mono text-[var(--text-muted)] mb-1">FACILITATOR</p>
+      <h1 className="font-display text-3xl font-semibold mb-6" style={{ color: "var(--text)" }}>{programme.name}</h1>
 
-            <div className="flex justify-center mb-6">
+      <div className="flex justify-center mb-6">
         <div className="paper p-1.5 flex gap-1 flex-wrap justify-center rounded-2xl">
           {[
+            { key: "documents", label: "Main Documents" },
             { key: "content", label: "Weekly Content" },
             { key: "submissions", label: "Submissions and Grading" },
             { key: "daily_attendance", label: "Attendance" },
@@ -208,6 +206,8 @@ export default function FacilitatorCoursePage() {
           ))}
         </div>
       </div>
+
+            {tab === "documents" && <QualificationModulesTab programme={programme} />}
 
       {tab === "content" && (
         <>
@@ -264,26 +264,44 @@ export default function FacilitatorCoursePage() {
         </>
       )}
 
-      {tab === "submissions" && (
+          {tab === "submissions" && (
         <>
-          <div className="flex gap-2 mb-6">
-            {[
-              { key: "submitted", label: "Awaiting Grading" },
-              { key: "graded", label: "Graded" },
-              { key: "all", label: "All" },
-            ].map((f) => (
-              <button
-                key={f.key}
-                onClick={() => setSubmissionFilter(f.key)}
-                className="px-3 py-1.5 rounded-lg text-xs font-medium"
-                style={submissionFilter === f.key ? { background: "var(--brand-color)", color: "white" } : { background: "var(--paper)", color: "var(--text-muted)", border: "1px solid var(--border-soft)" }}
-              >
-                {f.label}
-              </button>
-            ))}
+          <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+            <div className="flex gap-2">
+              {[
+                { key: "submitted", label: "Awaiting Grading" },
+                { key: "graded", label: "Graded" },
+                { key: "all", label: "All" },
+              ].map((f) => (
+                <button
+                  key={f.key}
+                  onClick={() => setSubmissionFilter(f.key)}
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium"
+                  style={submissionFilter === f.key ? { background: "var(--brand-color)", color: "white" } : { background: "var(--paper)", color: "var(--text-muted)", border: "1px solid var(--border-soft)" }}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => setViewByLearner((v) => !v)}
+              className="px-3 py-1.5 rounded-lg text-xs font-medium"
+              style={viewByLearner ? { background: "var(--brand-color)", color: "white" } : { background: "var(--paper)", color: "var(--text-muted)", border: "1px solid var(--border-soft)" }}
+            >
+              By Learner
+            </button>
           </div>
 
-          {submissions.length === 0 ? (
+          {viewByLearner ? (
+            <LearnerConsolidatedView
+              enrolledLearners={enrolledLearners}
+              submissions={submissions}
+              weeks={weeks}
+              programme={programme}
+              supabase={supabase}
+              onGraded={fetchAll}
+            />
+          ) : submissions.length === 0 ? (
             <div className="paper p-8 text-center text-gray-500 text-sm">
               No submissions {submissionFilter === "submitted" ? "awaiting grading" : submissionFilter === "graded" ? "graded yet" : "yet"} for this course.
             </div>
@@ -487,6 +505,107 @@ function FacilitatorMessages({ programme, enrolledLearners }) {
           />
           <button onClick={sendMessage} className="px-4 py-2 rounded-lg text-white text-sm font-medium" style={{ background: "var(--brand-color)" }}>Send</button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function LearnerConsolidatedView({ enrolledLearners, submissions, weeks, programme, supabase, onGraded }) {
+  const [selectedLearner, setSelectedLearner] = useState(enrolledLearners[0]?.user_id || null);
+  const [logbookEntries, setLogbookEntries] = useState([]);
+  const [modules, setModules] = useState([]);
+
+  useEffect(() => {
+    if (selectedLearner) fetchExtras();
+  }, [selectedLearner]);
+
+  const fetchExtras = async () => {
+    const { data: logs } = await supabase
+      .from("logbook_entries")
+      .select("*")
+      .eq("user_id", selectedLearner)
+      .eq("programme_id", programme.id)
+      .order("entry_date", { ascending: false });
+    setLogbookEntries(logs || []);
+
+    const { data: modulesData } = await supabase.from("qualification_modules").select("id, module_type, questions").eq("programme_id", programme.id);
+    setModules(modulesData || []);
+  };
+
+   const weekSubs = submissions.filter((s) => s.user_id === selectedLearner);
+
+  const weeksWithActivities = weeks.filter((w) => Object.values(w.activity_questions || {}).some((qs) => qs.length > 0));
+  const submittedWeekIds = new Set(weekSubs.filter((s) => s.unit_weeks).map((s) => s.unit_week_id));
+  const outstandingWeeks = weeksWithActivities.filter((w) => !submittedWeekIds.has(w.id));
+
+  const submittedModuleIds = new Set(weekSubs.filter((s) => s.module_id).map((s) => s.module_id));
+  const outstandingModules = modules.filter((m) => (m.questions || []).length > 0 && !submittedModuleIds.has(m.id));
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-[220px_1fr] gap-4">
+      <div className="paper p-3 h-fit">
+        <p className="text-xs font-mono text-gray-400 mb-2 px-1">LEARNERS</p>
+        <ul className="space-y-1">
+          {enrolledLearners.map((l) => {
+            const name = l.profiles ? `${l.profiles.first_name || ""} ${l.profiles.surname || ""}`.trim() : "Unknown";
+            return (
+              <li key={l.user_id}>
+                <button
+                  onClick={() => setSelectedLearner(l.user_id)}
+                  className="w-full text-left px-3 py-2 rounded-lg text-sm"
+                  style={selectedLearner === l.user_id ? { background: "var(--brand-color)", color: "white" } : { color: "var(--text)" }}
+                >
+                  {name}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+
+      <div className="space-y-4">
+        {(outstandingWeeks.length > 0 || outstandingModules.length > 0) && (
+          <div className="paper p-5">
+            <h3 className="font-display font-semibold mb-2" style={{ color: "var(--text)" }}>Outstanding</h3>
+            <ul className="space-y-1 text-sm">
+              {outstandingWeeks.map((w) => (
+                <li key={w.id} className="text-gray-600">
+                  {w.unit_standard_title} - due {new Date(w.week_end_date).toLocaleDateString()}
+                </li>
+              ))}
+              {outstandingModules.map((m) => (
+                <li key={m.id} className="text-gray-600 capitalize">{m.module_type} Module questions</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        <div>
+          <h3 className="font-display font-semibold mb-2" style={{ color: "var(--text)" }}>Submissions</h3>
+          {weekSubs.length === 0 ? (
+            <p className="text-sm text-gray-400">Nothing submitted yet.</p>
+          ) : (
+            <div className="space-y-3">
+              {weekSubs.map((sub) => (
+                <SubmissionRow key={sub.id} sub={sub} supabase={supabase} onGraded={onGraded} />
+              ))}
+            </div>
+          )}
+        </div>
+
+        {logbookEntries.length > 0 && (
+          <div className="paper p-5">
+            <h3 className="font-display font-semibold mb-2" style={{ color: "var(--text)" }}>Logbook Entries</h3>
+            <ul className="space-y-2">
+              {logbookEntries.map((e) => (
+                <li key={e.id} className="text-sm p-2 rounded-lg" style={{ background: "var(--paper-muted)" }}>
+                  <span className="font-mono text-xs text-gray-400">{new Date(e.entry_date).toLocaleDateString()}</span> - {e.description}
+                  <span className="ml-2 text-xs" style={{ color: e.signed_off ? "#047857" : "var(--seal-gold)" }}>{e.signed_off ? "Signed off" : "Pending"}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -2,7 +2,6 @@
   "/_app": "pages/_app.js",
   "/_document": "pages/_document.js",
   "/_error": "pages/_error.js",
-  "/facilitator/dashboard": "pages/facilitator/dashboard.js",
   "/module-player/facilitator/[id]": "pages/module-player/facilitator/[id].js",
   "/module-player/facilitator/[id]/modules": "pages/module-player/facilitator/[id]/modules.js"
 }
