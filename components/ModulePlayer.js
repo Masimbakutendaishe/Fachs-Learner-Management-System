@@ -56,12 +56,14 @@ const ResourceCard = ({ label, url }) => {
   );
 };
 
-const TeamsSession = ({ url, startDate, sessionDatetime }) => {
+const TeamsSession = ({ url, startDate, sessionDatetime, enrollment }) => {
+  const supabase = createClient();
   const [micOn, setMicOn] = useState(true);
   const [camOn, setCamOn] = useState(true);
   const [hasPermission, setHasPermission] = useState(false);
   const [countdown, setCountdown] = useState("");
   const videoRef = useRef(null);
+  const attendanceIdRef = useRef(null);
 
   useEffect(() => {
     if (camOn) {
@@ -74,6 +76,38 @@ const TeamsSession = ({ url, startDate, sessionDatetime }) => {
       videoRef.current.srcObject = null;
     }
   }, [camOn]);
+
+  useEffect(() => {
+    if (!sessionDatetime || !enrollment) return;
+    const sessionDate = new Date(sessionDatetime).toISOString().split("T")[0];
+    const today = new Date().toISOString().split("T")[0];
+    if (sessionDate !== today) return;
+
+    const markJoined = async () => {
+      const now = new Date().toISOString();
+      const { data, error } = await supabase
+        .from("daily_attendance")
+        .upsert({
+          programme_id: enrollment.programme_id,
+          institution_id: enrollment.institution_id,
+          user_id: enrollment.user_id,
+          date: today,
+          status: "present",
+          auto_tracked: true,
+          joined_at: now,
+        }, { onConflict: "programme_id,user_id,date" })
+        .select()
+        .single();
+      if (!error) attendanceIdRef.current = data.id;
+    };
+    markJoined();
+
+    return () => {
+      if (attendanceIdRef.current) {
+        supabase.from("daily_attendance").update({ left_at: new Date().toISOString() }).eq("id", attendanceIdRef.current);
+      }
+    };
+  }, [sessionDatetime, enrollment?.id]);
 
   useEffect(() => {
     if (!sessionDatetime) return;
@@ -1477,10 +1511,11 @@ export default function ModulePlayer({ enrollmentId }) {
 
           {currentActivity === "teams" && (
             <>
-              <TeamsSession
+                           <TeamsSession
                 url={unitWeek?.video_url || unitWeek?.teams_session_link}
                 startDate={unitWeek?.week_start_date}
                 sessionDatetime={unitWeek?.session_datetime}
+                enrollment={enrollment}
               />
               <ResourceCard label="Open Teams / Video link" url={unitWeek?.video_url || unitWeek?.teams_session_link} />
             </>

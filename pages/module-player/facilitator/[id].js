@@ -49,6 +49,7 @@ export default function FacilitatorCoursePage() {
   const [enrolledLearners, setEnrolledLearners] = useState([]);
   const [attendanceDate, setAttendanceDate] = useState(new Date().toISOString().split("T")[0]);
   const [attendanceRecords, setAttendanceRecords] = useState({});
+  const [attendanceMeta, setAttendanceMeta] = useState({});
   const [savingAttendance, setSavingAttendance] = useState(false);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState("content");
@@ -116,15 +117,20 @@ export default function FacilitatorCoursePage() {
     if (programme && attendanceDate) fetchAttendance();
   }, [programme, attendanceDate]);
 
-  const fetchAttendance = async () => {
+   const fetchAttendance = async () => {
     const { data } = await supabase
       .from("daily_attendance")
-      .select("user_id, status")
+      .select("user_id, status, auto_tracked, joined_at, left_at")
       .eq("programme_id", id)
       .eq("date", attendanceDate);
     const map = {};
-    (data || []).forEach((r) => { map[r.user_id] = r.status; });
+    const metaMap = {};
+    (data || []).forEach((r) => {
+      map[r.user_id] = r.status;
+      metaMap[r.user_id] = { auto_tracked: r.auto_tracked, joined_at: r.joined_at, left_at: r.left_at };
+    });
     setAttendanceRecords(map);
+    setAttendanceMeta(metaMap);
   };
 
   const markAttendance = async (userId, status) => {
@@ -339,18 +345,25 @@ export default function FacilitatorCoursePage() {
             <div className="paper overflow-hidden overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-left border-b" style={{ borderColor: "var(--border-soft)" }}>
+                                    <tr className="text-left border-b" style={{ borderColor: "var(--border-soft)" }}>
                     <th className="px-4 py-3 font-medium text-gray-500">Learner</th>
                     <th className="px-4 py-3 font-medium text-gray-500">Status</th>
+                    <th className="px-4 py-3 font-medium text-gray-500">Session Time</th>
                   </tr>
                 </thead>
                 <tbody>
                   {enrolledLearners.map((e) => {
                     const name = e.profiles ? `${e.profiles.first_name || ""} ${e.profiles.surname || ""}`.trim() : "Unknown";
                     const status = attendanceRecords[e.user_id] || "absent";
+                    const meta = attendanceMeta[e.user_id];
                     return (
                       <tr key={e.user_id} className="border-b last:border-0" style={{ borderColor: "var(--border-soft)" }}>
-                        <td className="px-4 py-3" style={{ color: "var(--text)" }}>{name}</td>
+                        <td className="px-4 py-3" style={{ color: "var(--text)" }}>
+                          {name}
+                          {meta?.auto_tracked && (
+                            <span className="ml-2 text-xs font-mono px-1.5 py-0.5 rounded" style={{ background: "var(--seal-gold-soft)", color: "var(--seal-gold)" }}>Auto</span>
+                          )}
+                        </td>
                         <td className="px-4 py-3">
                           <div className="flex gap-2">
                             {["present", "late", "absent"].map((s) => (
@@ -367,7 +380,15 @@ export default function FacilitatorCoursePage() {
                                 {s}
                               </button>
                             ))}
-                          </div>
+                                  </div>
+                        </td>
+                        <td className="px-4 py-3 text-xs text-gray-400 font-mono">
+                          {meta?.joined_at ? (
+                            <>
+                              {new Date(meta.joined_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                              {meta.left_at && ` - ${new Date(meta.left_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`}
+                            </>
+                          ) : "-"}
                         </td>
                       </tr>
                     );
