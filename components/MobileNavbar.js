@@ -176,37 +176,40 @@ export default function MobileNavbar() {
               )}
               <span className="text-sm font-medium">{displayName}</span>
             </button>
-            <div
+                       <div
               className={`absolute right-0 mt-2 w-60 rounded-xl shadow-2xl border overflow-hidden transition-all duration-200 ${
                 showDropdown ? "opacity-100 visible translate-y-0" : "opacity-0 invisible -translate-y-1"
               }`}
-              style={{ background: "var(--surface)", borderColor: "var(--border-soft)" }}
+              style={{ background: "var(--surface)", borderColor: "var(--border-soft)", "--text": "#101828", "--text-muted": "#667085" }}
             >
-              <div className="px-4 py-3 border-b" style={{ borderColor: "var(--border-soft)" }}>
-                <p className="text-sm text-white truncate">{user?.email}</p>
+                            <div className="px-4 py-3 border-b" style={{ borderColor: "var(--border-soft)" }}>
+                <p className="text-sm truncate" style={{ color: "var(--text)" }}>{user?.email}</p>
                 <p className="text-xs text-[var(--text-muted)] capitalize font-mono mt-0.5">{profile?.role?.replace("_", " ")}</p>
               </div>
+              <Link href="/profile" className="block px-4 py-2.5 text-sm text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-black/5 transition-colors">
+                My Profile
+              </Link>
               {profile?.role === "learner" && (
-                <Link href="/progress" className="block px-4 py-2.5 text-sm text-[var(--text-muted)] hover:text-white hover:bg-white/5 transition-colors">
+                <Link href="/progress" className="block px-4 py-2.5 text-sm text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-black/5 transition-colors">
                   My Progress &amp; Marks
                 </Link>
               )}
               {profile?.role === "institution_admin" && (
                 <>
-                  <Link href="/admin/institution-settings" className="block px-4 py-2.5 text-sm text-[var(--text-muted)] hover:text-white hover:bg-black/5 transition-colors">
+                  <Link href="/admin/institution-settings" className="block px-4 py-2.5 text-sm text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-black/5 transition-colors">
                     Institution Settings
                   </Link>
-                  <Link href="/admin/billing" className="block px-4 py-2.5 text-sm text-[var(--text-muted)] hover:text-white hover:bg-white/5 transition-colors">
+                  <Link href="/admin/billing" className="block px-4 py-2.5 text-sm text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-black/5 transition-colors">
                     Billing
                   </Link>
-                  <Link href="/admin/fees" className="block px-4 py-2.5 text-sm text-[var(--text-muted)] hover:text-white hover:bg-white/5 transition-colors">
+                  <Link href="/admin/fees" className="block px-4 py-2.5 text-sm text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-black/5 transition-colors">
                     Fees &amp; Invoices
                   </Link>
                 </>
               )}
               <button
                 onClick={signOut}
-                className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-[var(--text-muted)] hover:text-white hover:bg-black/5 transition-colors text-left"
+                className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-black/5 transition-colors text-left"
               >
                 <LogOut size={15} /> Sign Out
               </button>
