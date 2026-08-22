@@ -52,10 +52,20 @@ export default function FacilitatorLoginModal({ isOpen, onClose, onSwitchToLearn
         }).eq("id", userId);
         if (profileError) return alert(profileError.message);
 
+                const { data: { session } } = await supabase.auth.getSession();
+
+        if (session) {
+          // Already logged in (email confirmation is off), skip straight to their dashboard
+          onClose();
+          router.push(onboardingAction === "create_institution" ? "/admin/institution-settings" : "/facilitator/dashboard");
+          return;
+        }
+
+        // Email confirmation is required, they genuinely aren't logged in yet
         if (onboardingAction === "create_institution") {
-          alert(`Institution created! Please sign in. Your team invite code will be in Institution Settings once you're logged in.`);
+          alert("Institution created! Check your email to confirm your account, then sign in.");
         } else {
-          alert("Facilitator account created! Please sign in.");
+          alert("Facilitator account created! Check your email to confirm your account, then sign in.");
         }
         setIsSignUp(false);
         setEmail("");

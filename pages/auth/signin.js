@@ -2,12 +2,20 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { createClient } from "../../lib/supabase/client";
 
+function homeForRole(role) {
+  if (role === "superadmin") return "/superadmin";
+  if (role === "institution_admin") return "/admin/institution-settings";
+  if (role === "facilitator") return "/facilitator/dashboard";
+  return "/dashboard";
+}
+
 export default function SignInPage() {
   const supabase = createClient();
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [msg, setMsg] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -17,32 +25,56 @@ export default function SignInPage() {
     return () => { mounted = false; };
   }, [router]);
 
-  const handleSignIn = async () => {
+  const handleSignIn = async (e) => {
+    e.preventDefault();
+    if (submitting) return;
+    setSubmitting(true);
     setMsg("Signing in...");
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) return setMsg(`Sign in error: ${error.message}`);
 
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", data.user.id)
-      .single();
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) { setMsg(error.message); return; }
 
-    const redirectedFrom = router.query.redirectedFrom;
-    if (profile?.role === "facilitator") {
-      router.push(redirectedFrom?.startsWith("/facilitator") ? redirectedFrom : "/facilitator/dashboard");
-    } else {
-      router.push(redirectedFrom && !redirectedFrom.startsWith("/facilitator") ? redirectedFrom : "/dashboard");
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", data.user.id)
+        .single();
+
+      const home = homeForRole(profile?.role);
+      const redirectedFrom = router.query.redirectedFrom;
+      router.push(redirectedFrom || home);
+    } finally {
+      setSubmitting(false);
     }
   };
 
   return (
-    <main className="max-w-md mx-auto p-6 space-y-4">
-      <h1 className="text-2xl font-semibold">Sign In</h1>
-      <input className="w-full border p-2 rounded" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@domain.com" type="email" />
-      <input className="w-full border p-2 rounded" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="password" type="password" />
-      <button onClick={handleSignIn} className="px-4 py-2 rounded bg-green-600 text-white">Sign In</button>
-      {msg && <p className="text-sm opacity-80">{msg}</p>}
-    </main>
+    <div className="max-w-sm mx-auto py-16 px-4 animate-fade-up">
+      <p className="text-xs font-mono text-[var(--text-muted)] mb-1 text-center">WELCOME BACK</p>
+      <h1 className="font-display text-2xl font-semibold mb-6 text-center" style={{ color: "var(--text)" }}>
+        Sign In
+      </h1>
+
+      <form onSubmit={handleSignIn} className="paper p-6 space-y-3">
+        <input
+          type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+          placeholder="you@domain.com" required
+          className="w-full px-3 py-2 rounded-lg border text-sm" style={{ borderColor: "var(--border-soft)" }}
+        />
+        <input
+          type="password" value={password} onChange={(e) => setPassword(e.target.value)}
+          placeholder="Password" required
+          className="w-full px-3 py-2 rounded-lg border text-sm" style={{ borderColor: "var(--border-soft)" }}
+        />
+        <button
+          type="submit" disabled={submitting}
+          className="btn-silver w-full py-2.5 rounded-lg text-sm font-medium disabled:opacity-50"
+        >
+          {submitting ? "Signing in..." : "Sign In"}
+        </button>
+        {msg && <p className="text-sm text-center" style={{ color: "var(--text-muted)" }}>{msg}</p>}
+      </form>
+    </div>
   );
 }

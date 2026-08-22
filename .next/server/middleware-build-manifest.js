@@ -20,15 +20,20 @@ self.__BUILD_MANIFEST = {
       "static/chunks/main.js",
       "static/chunks/pages/_error.js"
     ],
-    "/admin/billing": [
-      "static/chunks/webpack.js",
-      "static/chunks/main.js",
-      "static/chunks/pages/admin/billing.js"
-    ],
     "/admin/institution-settings": [
       "static/chunks/webpack.js",
       "static/chunks/main.js",
       "static/chunks/pages/admin/institution-settings.js"
+    ],
+    "/facilitator/dashboard": [
+      "static/chunks/webpack.js",
+      "static/chunks/main.js",
+      "static/chunks/pages/facilitator/dashboard.js"
+    ],
+    "/module-player/facilitator/[id]": [
+      "static/chunks/webpack.js",
+      "static/chunks/main.js",
+      "static/chunks/pages/module-player/facilitator/[id].js"
     ]
   },
   "ampFirstPages": []

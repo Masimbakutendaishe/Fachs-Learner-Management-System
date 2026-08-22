@@ -22,6 +22,13 @@ const ROLE_PREFIXES = {
   "/previousuploads": ["facilitator", "institution_admin", "superadmin"],
 };
 
+function homeForRole(role) {
+  if (role === "superadmin") return "/superadmin";
+  if (role === "institution_admin") return "/admin/institution-settings";
+  if (role === "facilitator") return "/facilitator/dashboard";
+  return "/dashboard";
+}
+
 export async function middleware(request) {
   let response = NextResponse.next({ request: { headers: request.headers } });
 
@@ -79,7 +86,7 @@ export async function middleware(request) {
     if (rolePrefix) {
       const allowedRoles = ROLE_PREFIXES[rolePrefix];
       if (!profile || !allowedRoles.includes(profile.role)) {
-        return NextResponse.redirect(new URL("/dashboard", request.url));
+        return NextResponse.redirect(new URL(homeForRole(profile?.role), request.url));
       }
     }
   }
