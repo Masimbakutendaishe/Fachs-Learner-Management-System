@@ -4,6 +4,8 @@
 
 :root {
   --brand-color: #52525B;
+  --brand-secondary: #71717A;
+  --brand-accent: #B8873B;
   --shell: #F4F5F7;
   --surface: #FFFFFF;
   --border-soft: rgba(16, 24, 40, 0.08);

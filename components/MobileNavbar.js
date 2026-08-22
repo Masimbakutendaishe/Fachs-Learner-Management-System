@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Menu, X, User, LayoutDashboard, LogOut, Bell } from "lucide-react";
+import { Menu, X, User, LayoutDashboard, LogOut, Bell, UserCog } from "lucide-react";
 import { createClient as createSupabaseClient } from "../lib/supabase/client";
 import FacilitatorLoginModal from "./FacilitatorLoginModal";
 import AuthModal from "./AuthModal";
@@ -63,16 +63,13 @@ export default function MobileNavbar() {
     setIsOpen(false);
   };
 
+    const isPlatformRole = profile?.role === "institution_admin" || profile?.role === "superadmin";
+
   const menuItems =
     profile?.role === "facilitator"
       ? [{ name: "Home", href: "/" }]
-      : profile?.role === "institution_admin"
-      ? [
-          { name: "Home", href: "/" },
-          { name: "Institution Settings", href: "/admin/institution-settings" },
-        ]
-      : profile?.role === "superadmin"
-      ? [{ name: "Institutions", href: "/superadmin" }]
+      : isPlatformRole
+      ? []
       : [
           { name: "Home", href: "/" },
           { name: "Qualifications", href: "/qualifications" },
@@ -97,15 +94,28 @@ export default function MobileNavbar() {
       </div>
 
       <div className="hidden md:flex items-center gap-3">
-        {isAuthenticated && (
+                {isAuthenticated && isPlatformRole && (
+          <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2">
+            <Link
+              href={profile?.role === "superadmin" ? "/superadmin" : "/admin/institution-settings"}
+              title="Dashboard"
+              className="p-2.5 rounded-lg hover:bg-black/5 transition-colors"
+            >
+              <LayoutDashboard size={20} className="text-[var(--text-muted)]" />
+            </Link>
+            <Link
+              href={profile?.role === "superadmin" ? "/superadmin/users" : "/admin/users"}
+              title="Manage Users"
+              className="p-2.5 rounded-lg hover:bg-black/5 transition-colors"
+            >
+              <UserCog size={20} className="text-[var(--text-muted)]" />
+            </Link>
+          </div>
+        )}
+        {isAuthenticated && !isPlatformRole && (
           <>
             <Link
-              href={
-                profile?.role === "superadmin" ? "/superadmin" :
-                profile?.role === "facilitator" ? "/facilitator/dashboard" :
-                profile?.role === "institution_admin" ? "/admin/institution-settings" :
-                "/dashboard"
-              }
+              href={profile?.role === "facilitator" ? "/facilitator/dashboard" : "/dashboard"}
               className="p-2 rounded-lg hover:bg-black/5 transition-colors"
             >
               <LayoutDashboard size={18} className="text-[var(--text-muted)]" />

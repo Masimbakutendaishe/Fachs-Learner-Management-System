@@ -9,10 +9,9 @@ export default function Layout({ children }) {
   const { institution } = useAuth();
 
   useEffect(() => {
-    document.documentElement.style.setProperty(
-      "--brand-color",
-      institution?.theme_color || "#52525B"
-    );
+    document.documentElement.style.setProperty("--brand-color", institution?.theme_color || "#52525B");
+    document.documentElement.style.setProperty("--brand-secondary", institution?.secondary_color || "#71717A");
+    document.documentElement.style.setProperty("--brand-accent", institution?.accent_color || "#B8873B");
   }, [institution]);
 
   return (

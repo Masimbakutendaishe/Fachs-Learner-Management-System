@@ -3,9 +3,7 @@
   "/_error": "pages/_error.js",
   "/_document": "pages/_document.js",
   "/superadmin": "pages/superadmin.js",
-  "/superadmin/institutions/[id]": "pages/superadmin/institutions/[id].js",
-  "/superadmin/users": "pages/superadmin/users.js",
-  "/reset-password": "pages/reset-password.js",
-  "/superadmin/plans": "pages/superadmin/plans.js",
-  "/api/superadmin/list-users": "pages/api/superadmin/list-users.js"
+  "/": "pages/index.js",
+  "/admin/institution-settings": "pages/admin/institution-settings.js",
+  "/reset-password": "pages/reset-password.js"
 }

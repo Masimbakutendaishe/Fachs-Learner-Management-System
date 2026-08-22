@@ -20,6 +20,11 @@ self.__BUILD_MANIFEST = {
       "static/chunks/main.js",
       "static/chunks/pages/_error.js"
     ],
+    "/admin/institution-settings": [
+      "static/chunks/webpack.js",
+      "static/chunks/main.js",
+      "static/chunks/pages/admin/institution-settings.js"
+    ],
     "/reset-password": [
       "static/chunks/webpack.js",
       "static/chunks/main.js",
@@ -29,21 +34,6 @@ self.__BUILD_MANIFEST = {
       "static/chunks/webpack.js",
       "static/chunks/main.js",
       "static/chunks/pages/superadmin.js"
-    ],
-    "/superadmin/institutions/[id]": [
-      "static/chunks/webpack.js",
-      "static/chunks/main.js",
-      "static/chunks/pages/superadmin/institutions/[id].js"
-    ],
-    "/superadmin/plans": [
-      "static/chunks/webpack.js",
-      "static/chunks/main.js",
-      "static/chunks/pages/superadmin/plans.js"
-    ],
-    "/superadmin/users": [
-      "static/chunks/webpack.js",
-      "static/chunks/main.js",
-      "static/chunks/pages/superadmin/users.js"
     ]
   },
   "ampFirstPages": []
