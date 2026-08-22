@@ -116,7 +116,8 @@ function ModuleEditor({ module, moduleType, programme, onSaved }) {
   const [generating, setGenerating] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const [newQ, setNewQ] = useState({ scenario: "", text: "", type: "free", marks: "" });
+  const [newQ, setNewQ] = useState({ scenario: "", text: "", type: "free", marks: "", options: [] });
+  const [newOption, setNewOption] = useState("");
 
   const handleGuideUpload = async (file) => {
     setUploading(true);
@@ -172,6 +173,13 @@ function ModuleEditor({ module, moduleType, programme, onSaved }) {
     }
   };
 
+    const addOption = () => {
+    if (!newOption.trim()) return;
+    setNewQ((p) => ({ ...p, options: [...p.options, newOption] }));
+    setNewOption("");
+  };
+  const removeOption = (i) => setNewQ((p) => ({ ...p, options: p.options.filter((_, idx) => idx !== i) }));
+
   const addQuestion = () => {
     if (!newQ.text.trim()) return;
     setQuestions((prev) => [...prev, {
@@ -180,9 +188,9 @@ function ModuleEditor({ module, moduleType, programme, onSaved }) {
       type: newQ.type,
       marks: newQ.marks ? Number(newQ.marks) : null,
       media: null,
-      options: [],
+      options: newQ.options,
     }]);
-    setNewQ({ scenario: "", text: "", type: "free", marks: "" });
+    setNewQ({ scenario: "", text: "", type: "free", marks: "", options: [] });
   };
 
   const removeQuestion = (i) => setQuestions((prev) => prev.filter((_, idx) => idx !== i));
@@ -284,14 +292,41 @@ function ModuleEditor({ module, moduleType, programme, onSaved }) {
           )}
           <input type="text" placeholder="Question text" value={newQ.text} onChange={(e) => setNewQ((p) => ({ ...p, text: e.target.value }))} className={inputClass} style={{ borderColor: "var(--border-soft)" }} />
           <div className="flex gap-2">
-            <select value={newQ.type} onChange={(e) => setNewQ((p) => ({ ...p, type: e.target.value }))} className={`${inputClass} flex-1`} style={{ borderColor: "var(--border-soft)" }}>
+                        <select value={newQ.type} onChange={(e) => setNewQ((p) => ({ ...p, type: e.target.value, options: [] }))} className={`${inputClass} flex-1`} style={{ borderColor: "var(--border-soft)" }}>
               <option value="free">Free text</option>
-              <option value="mcq">Multiple choice</option>
+              <option value="mcq">Multiple choice (single answer)</option>
+              <option value="multi_select">Multiple choice (select several)</option>
               <option value="yesno">Yes / No</option>
+              <option value="image_answer">Image upload (learner attaches a photo)</option>
+              <option value="audio_answer">Audio recording (learner attaches a voice note)</option>
             </select>
             <input type="number" placeholder="Marks" value={newQ.marks} onChange={(e) => setNewQ((p) => ({ ...p, marks: e.target.value }))} className={`${inputClass} w-24`} style={{ borderColor: "var(--border-soft)" }} />
             <button onClick={addQuestion} className="px-3 py-2 rounded-lg text-sm font-medium" style={{ border: "1px solid var(--border-soft)", color: "var(--text)" }}>Add</button>
           </div>
+          {(newQ.type === "mcq" || newQ.type === "multi_select") && (
+            <div className="p-3 rounded-lg" style={{ background: "var(--paper-muted)" }}>
+              <p className="text-xs text-[var(--text-muted)] mb-2">Answer options</p>
+              {newQ.options.length > 0 && (
+                <ul className="space-y-1 mb-2">
+                  {newQ.options.map((opt, i) => (
+                    <li key={i} className="flex items-center justify-between gap-2 text-sm p-1.5 rounded" style={{ background: "white" }}>
+                      <span>{opt}</span>
+                      <button type="button" onClick={() => removeOption(i)} className="text-xs text-red-500 hover:underline">Remove</button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <div className="flex gap-2">
+                <input
+                  type="text" placeholder="Add an option" value={newOption}
+                  onChange={(e) => setNewOption(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addOption(); } }}
+                  className={`${inputClass} flex-1`} style={{ borderColor: "var(--border-soft)" }}
+                />
+                <button type="button" onClick={addOption} className="px-3 py-2 rounded-lg text-sm font-medium" style={{ border: "1px solid var(--border-soft)", color: "var(--text)" }}>Add Option</button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

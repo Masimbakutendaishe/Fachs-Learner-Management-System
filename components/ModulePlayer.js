@@ -148,6 +148,34 @@ const SubmissionStatus = ({ submission }) => {
   );
 };
 
+const AnswerMediaUpload = ({ accept, value, onChange, label }) => {
+  const supabase = createClient();
+  const [uploading, setUploading] = useState(false);
+
+  const handleUpload = async (file) => {
+    setUploading(true);
+    try {
+      const path = `answer-media/${Date.now()}_${file.name}`;
+      const { error } = await supabase.storage.from("submissions").upload(path, file);
+      if (error) throw error;
+      const { data: signed } = await supabase.storage.from("submissions").createSignedUrl(path, 60 * 60 * 24 * 365);
+      onChange(signed?.signedUrl || path);
+    } catch (err) {
+      alert("Upload failed: " + err.message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div className="mb-4">
+      <input type="file" accept={accept} onChange={(e) => e.target.files[0] && handleUpload(e.target.files[0])} className="text-sm text-gray-500" disabled={uploading} />
+      {uploading && <p className="text-xs text-[var(--seal-gold)] font-mono mt-1">Uploading...</p>}
+      {value && !uploading && <p className="text-xs text-emerald-600 mt-1">{label} attached</p>}
+    </div>
+  );
+};
+
 function normalizeQuestion(q) {
   if (typeof q === "string") return { text: q, type: "free", marks: null, media: null, options: [] };
   return { type: "free", marks: null, media: null, options: [], ...q };
@@ -312,7 +340,7 @@ const LearningResource = ({ title, url, questions, onComplete, activityType, enr
             </div>
             <QuestionMedia media={normQuestions[step].media} />
 
-            {normQuestions[step].type === "mcq" ? (
+                        {normQuestions[step].type === "mcq" ? (
               <div className="space-y-2 mb-4">
                 {(normQuestions[step].options || []).map((opt, i) => (
                   <label key={i} className="flex items-center gap-2 p-2.5 rounded-lg text-sm cursor-pointer" style={{ background: answers[step] === opt ? "var(--seal-gold-soft)" : "white", border: "1px solid var(--border-soft)" }}>
@@ -320,6 +348,24 @@ const LearningResource = ({ title, url, questions, onComplete, activityType, enr
                     {opt}
                   </label>
                 ))}
+              </div>
+            ) : normQuestions[step].type === "multi_select" ? (
+              <div className="space-y-2 mb-4">
+                {(normQuestions[step].options || []).map((opt, i) => {
+                  const selected = Array.isArray(answers[step]) && answers[step].includes(opt);
+                  return (
+                    <label key={i} className="flex items-center gap-2 p-2.5 rounded-lg text-sm cursor-pointer" style={{ background: selected ? "var(--seal-gold-soft)" : "white", border: "1px solid var(--border-soft)" }}>
+                      <input
+                        type="checkbox" checked={selected}
+                        onChange={() => setAnswers((prev) => {
+                          const current = Array.isArray(prev[step]) ? prev[step] : [];
+                          return { ...prev, [step]: selected ? current.filter((o) => o !== opt) : [...current, opt] };
+                        })}
+                      />
+                      {opt}
+                    </label>
+                  );
+                })}
               </div>
             ) : normQuestions[step].type === "yesno" ? (
               <div className="flex gap-3 mb-4">
@@ -333,6 +379,10 @@ const LearningResource = ({ title, url, questions, onComplete, activityType, enr
                   </button>
                 ))}
               </div>
+            ) : normQuestions[step].type === "image_answer" ? (
+              <AnswerMediaUpload accept="image/*" value={answers[step]} onChange={(url) => setAnswers((prev) => ({ ...prev, [step]: url }))} label="Image" />
+            ) : normQuestions[step].type === "audio_answer" ? (
+              <AnswerMediaUpload accept="audio/*" value={answers[step]} onChange={(url) => setAnswers((prev) => ({ ...prev, [step]: url }))} label="Recording" />
             ) : (
               <textarea className="w-full p-3 rounded-lg border text-sm mb-4" style={{ borderColor: "var(--border-soft)" }} value={answers[step] || ""} onChange={(e) => setAnswers((prev) => ({ ...prev, [step]: e.target.value }))} placeholder="Type your answer here..." rows={4} />
             )}
@@ -540,7 +590,7 @@ const ModuleQuestionAnswer = ({ module, enrollment, existingSubmission, onSubmit
       {q.scenario && <p className="text-xs text-gray-500 italic mb-2">Scenario: {q.scenario}</p>}
       <QuestionMedia media={q.media} />
 
-      {q.type === "mcq" ? (
+            {q.type === "mcq" ? (
         <div className="space-y-2 mb-4">
           {(q.options || []).map((opt, i) => (
             <label key={i} className="flex items-center gap-2 p-2.5 rounded-lg text-sm cursor-pointer" style={{ background: answers[step] === opt ? "var(--seal-gold-soft)" : "white", border: "1px solid var(--border-soft)" }}>
@@ -548,6 +598,24 @@ const ModuleQuestionAnswer = ({ module, enrollment, existingSubmission, onSubmit
               {opt}
             </label>
           ))}
+        </div>
+      ) : q.type === "multi_select" ? (
+        <div className="space-y-2 mb-4">
+          {(q.options || []).map((opt, i) => {
+            const selected = Array.isArray(answers[step]) && answers[step].includes(opt);
+            return (
+              <label key={i} className="flex items-center gap-2 p-2.5 rounded-lg text-sm cursor-pointer" style={{ background: selected ? "var(--seal-gold-soft)" : "white", border: "1px solid var(--border-soft)" }}>
+                <input
+                  type="checkbox" checked={selected}
+                  onChange={() => setAnswers((prev) => {
+                    const current = Array.isArray(prev[step]) ? prev[step] : [];
+                    return { ...prev, [step]: selected ? current.filter((o) => o !== opt) : [...current, opt] };
+                  })}
+                />
+                {opt}
+              </label>
+            );
+          })}
         </div>
       ) : q.type === "yesno" ? (
         <div className="flex gap-3 mb-4">
@@ -561,6 +629,10 @@ const ModuleQuestionAnswer = ({ module, enrollment, existingSubmission, onSubmit
             </button>
           ))}
         </div>
+      ) : q.type === "image_answer" ? (
+        <AnswerMediaUpload accept="image/*" value={answers[step]} onChange={(url) => setAnswers((prev) => ({ ...prev, [step]: url }))} label="Image" />
+      ) : q.type === "audio_answer" ? (
+        <AnswerMediaUpload accept="audio/*" value={answers[step]} onChange={(url) => setAnswers((prev) => ({ ...prev, [step]: url }))} label="Recording" />
       ) : (
         <textarea className="w-full p-3 rounded-lg border text-sm mb-4" style={{ borderColor: "var(--border-soft)" }} value={answers[step] || ""} onChange={(e) => setAnswers((prev) => ({ ...prev, [step]: e.target.value }))} placeholder="Type your answer here..." rows={4} />
       )}
