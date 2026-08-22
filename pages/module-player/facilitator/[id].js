@@ -803,6 +803,7 @@ function WeekModal({ week, onClose, onSaved }) {
   const [newQuestionMarks, setNewQuestionMarks] = useState({ workbook: "", knowledge: "", summative: "", practical: "" });
   const [newQuestionOptions, setNewQuestionOptions] = useState({ workbook: [], knowledge: [], summative: [], practical: [] });
   const [newOptionText, setNewOptionText] = useState({ workbook: "", knowledge: "", summative: "", practical: "" });
+  const [activityDeadlines, setActivityDeadlines] = useState(week.activity_deadlines || {});
   const [chapters, setChapters] = useState(week.guide_chapters || []);
   const [extractingChapters, setExtractingChapters] = useState(false);
   const [voiceRecordings, setVoiceRecordings] = useState(week.voice_recordings || []);
@@ -973,7 +974,7 @@ function WeekModal({ week, onClose, onSaved }) {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const payload = {
+            const payload = {
         ...form,
         session_datetime: form.session_datetime ? new Date(form.session_datetime).toISOString() : null,
         programme_id: week.programme_id,
@@ -983,6 +984,7 @@ function WeekModal({ week, onClose, onSaved }) {
         voice_recordings: voiceRecordings,
         youtube_links: youtubeLinks,
         reading_links: readingLinks,
+        activity_deadlines: activityDeadlines,
       };
       const isNewWeek = !week.id;
       const { error } = isNewWeek
@@ -1274,6 +1276,28 @@ function WeekModal({ week, onClose, onSaved }) {
               <>
                 {["workbook", "knowledge", "summative", "practical"].map((activityKey) => (
                   <div key={activityKey} className="pt-2 border-t first:border-0 first:pt-0" style={{ borderColor: "var(--border-soft)" }}>
+                                        <div className="flex items-center gap-3 mb-2">
+                      <div>
+                        <label className="block text-xs text-[var(--text-muted)] mb-1">Deadline</label>
+                        <input
+                          type="date"
+                          value={activityDeadlines[activityKey]?.deadline || ""}
+                          onChange={(e) => setActivityDeadlines((prev) => ({ ...prev, [activityKey]: { ...prev[activityKey], deadline: e.target.value } }))}
+                          disabled={readOnly}
+                          className="px-2 py-1.5 rounded-lg border text-xs" style={{ borderColor: "var(--border-soft)" }}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-[var(--text-muted)] mb-1">Time limit (mins)</label>
+                        <input
+                          type="number" placeholder="No limit"
+                          value={activityDeadlines[activityKey]?.time_limit_minutes || ""}
+                          onChange={(e) => setActivityDeadlines((prev) => ({ ...prev, [activityKey]: { ...prev[activityKey], time_limit_minutes: e.target.value ? Number(e.target.value) : null } }))}
+                          disabled={readOnly}
+                          className="w-24 px-2 py-1.5 rounded-lg border text-xs" style={{ borderColor: "var(--border-soft)" }}
+                        />
+                      </div>
+                    </div>
                     <div className="flex items-center justify-between mb-1">
                       <label className="block text-xs text-[var(--text-muted)] capitalize">{activityKey} Questions</label>
                       {!readOnly && (() => {

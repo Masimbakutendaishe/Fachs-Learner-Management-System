@@ -286,6 +286,24 @@ const LearningResource = ({ title, url, questions, onComplete, activityType, enr
   const [submitting, setSubmitting] = useState(false);
   const normQuestions = (questions || []).map(normalizeQuestion);
 
+  const deadlineInfo = unitWeek?.activity_deadlines?.[activityType];
+  const deadlinePassed = deadlineInfo?.deadline && new Date(deadlineInfo.deadline) < new Date().setHours(0, 0, 0, 0);
+  const [startedAt] = useState(() => Date.now());
+  const [remainingSeconds, setRemainingSeconds] = useState(null);
+
+  useEffect(() => {
+    if (!deadlineInfo?.time_limit_minutes || existingSubmission || deadlinePassed) return;
+    const tick = () => {
+      const elapsed = (Date.now() - startedAt) / 1000;
+      const remaining = deadlineInfo.time_limit_minutes * 60 - elapsed;
+      setRemainingSeconds(Math.max(0, Math.floor(remaining)));
+      if (remaining <= 0) handleSubmitAnswers();
+    };
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   const handleSubmitAnswers = async () => {
     setSubmitting(true);
     try {
@@ -318,7 +336,7 @@ const LearningResource = ({ title, url, questions, onComplete, activityType, enr
       <div className="mt-4">
         <SubmissionStatus submission={existingSubmission} />
       </div>
-            {existingSubmission ? (
+                {existingSubmission ? (
         <div className="p-4 rounded-xl text-sm text-gray-600 space-y-2" style={{ background: "var(--paper-muted)" }}>
           {existingSubmission.answers && Object.entries(existingSubmission.answers).map(([q, a]) => (
             <p key={q}><span className="font-medium text-gray-800">Q{Number(q) + 1}:</span> {a}</p>
@@ -326,11 +344,20 @@ const LearningResource = ({ title, url, questions, onComplete, activityType, enr
         </div>
       ) : readOnly ? (
         <p className="text-sm text-gray-400">This week has passed and no submission was made.</p>
+      ) : deadlinePassed ? (
+        <p className="text-sm text-gray-400">The deadline for this activity ({new Date(deadlineInfo.deadline).toLocaleDateString()}) has passed.</p>
       ) : normQuestions.length === 0 ? (
         <p className="text-sm text-gray-400">Your facilitator hasn't added questions for this activity yet.</p>
       ) : (
         <>
-          <p className="text-xs font-mono text-[var(--seal-gold)] mb-4">Read the material fully before answering below</p>
+                    <div className="flex items-center justify-between mb-4">
+            <p className="text-xs font-mono text-[var(--seal-gold)]">Read the material fully before answering below</p>
+            {deadlineInfo?.time_limit_minutes && remainingSeconds != null && (
+              <span className="text-xs font-mono px-2.5 py-1 rounded-full" style={{ background: remainingSeconds < 60 ? "#FEF2F2" : "var(--seal-gold-soft)", color: remainingSeconds < 60 ? "#B91C1C" : "var(--seal-gold)" }}>
+                {Math.floor(remainingSeconds / 60)}:{(remainingSeconds % 60).toString().padStart(2, "0")}
+              </span>
+            )}
+          </div>
           <div className="p-4 rounded-xl" style={{ background: "var(--paper-muted)" }}>
             <div className="flex items-center justify-between mb-2">
               <p className="text-sm font-medium" style={{ color: "var(--text)" }}>{normQuestions[step].text}</p>
@@ -550,10 +577,31 @@ const ModuleQuestionAnswer = ({ module, enrollment, existingSubmission, onSubmit
   const [submitting, setSubmitting] = useState(false);
   const normQuestions = (module.questions || []).map(normalizeQuestion);
 
+  const deadlinePassed = module.deadline && new Date(module.deadline) < new Date().setHours(0, 0, 0, 0);
+  const [startedAt] = useState(() => Date.now());
+  const [remainingSeconds, setRemainingSeconds] = useState(null);
+
+  useEffect(() => {
+    if (!module.time_limit_minutes || existingSubmission || deadlinePassed || normQuestions.length === 0) return;
+    const tick = () => {
+      const elapsed = (Date.now() - startedAt) / 1000;
+      const remaining = module.time_limit_minutes * 60 - elapsed;
+      setRemainingSeconds(Math.max(0, Math.floor(remaining)));
+      if (remaining <= 0) handleSubmit();
+    };
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   if (normQuestions.length === 0) return null;
 
   if (existingSubmission) {
     return <SubmissionStatus submission={existingSubmission} />;
+  }
+
+  if (deadlinePassed) {
+    return <p className="text-sm text-gray-400 mt-4">The deadline for this module ({new Date(module.deadline).toLocaleDateString()}) has passed.</p>;
   }
 
   const handleSubmit = async () => {
@@ -580,7 +628,14 @@ const ModuleQuestionAnswer = ({ module, enrollment, existingSubmission, onSubmit
   const q = normQuestions[step];
 
   return (
-    <div className="mt-4 p-4 rounded-xl" style={{ background: "var(--paper-muted)" }}>
+       <div className="mt-4 p-4 rounded-xl" style={{ background: "var(--paper-muted)" }}>
+      {module.time_limit_minutes && remainingSeconds != null && (
+        <div className="flex justify-end mb-2">
+          <span className="text-xs font-mono px-2.5 py-1 rounded-full" style={{ background: remainingSeconds < 60 ? "#FEF2F2" : "var(--seal-gold-soft)", color: remainingSeconds < 60 ? "#B91C1C" : "var(--seal-gold)" }}>
+            {Math.floor(remainingSeconds / 60)}:{(remainingSeconds % 60).toString().padStart(2, "0")}
+          </span>
+        </div>
+      )}
       <div className="flex items-center justify-between mb-2">
         <p className="text-sm font-medium" style={{ color: "var(--text)" }}>{q.text}</p>
         {q.marks != null && (

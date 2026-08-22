@@ -111,6 +111,8 @@ function ModuleEditor({ module, moduleType, programme, onSaved }) {
   const [guideUrl, setGuideUrl] = useState(module?.guide_url || "");
   const [chapters, setChapters] = useState(module?.guide_chapters || []);
   const [questions, setQuestions] = useState(module?.questions || []);
+  const [deadline, setDeadline] = useState(module?.deadline || "");
+  const [timeLimitMinutes, setTimeLimitMinutes] = useState(module?.time_limit_minutes || "");
   const [uploading, setUploading] = useState(false);
   const [extracting, setExtracting] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -198,9 +200,13 @@ function ModuleEditor({ module, moduleType, programme, onSaved }) {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const { error } = await supabase
+            const { error } = await supabase
         .from("qualification_modules")
-        .update({ guide_url: guideUrl, guide_chapters: chapters, questions })
+        .update({
+          guide_url: guideUrl, guide_chapters: chapters, questions,
+          deadline: deadline || null,
+          time_limit_minutes: timeLimitMinutes ? Number(timeLimitMinutes) : null,
+        })
         .eq("id", module.id);
       if (error) throw error;
       onSaved();
@@ -257,7 +263,17 @@ function ModuleEditor({ module, moduleType, programme, onSaved }) {
         </div>
       </div>
 
-      <div className="paper p-6 space-y-3">
+            <div className="paper p-6 space-y-3">
+        <div className="flex items-center gap-3">
+          <div>
+            <label className="block text-xs text-[var(--text-muted)] mb-1">Deadline</label>
+            <input type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} className="px-2 py-1.5 rounded-lg border text-xs" style={{ borderColor: "var(--border-soft)" }} />
+          </div>
+          <div>
+            <label className="block text-xs text-[var(--text-muted)] mb-1">Time limit (mins)</label>
+            <input type="number" placeholder="No limit" value={timeLimitMinutes} onChange={(e) => setTimeLimitMinutes(e.target.value)} className="w-24 px-2 py-1.5 rounded-lg border text-xs" style={{ borderColor: "var(--border-soft)" }} />
+          </div>
+        </div>
         <div className="flex items-center justify-between">
           <h2 className="font-display font-semibold" style={{ color: "var(--text)" }}>
             {isPractical ? "Scenario Questions" : "Questions"}
