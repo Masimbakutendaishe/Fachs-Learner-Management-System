@@ -4,6 +4,7 @@ import { useRouter } from "next/router";
 import { createClient } from "../lib/supabase/client";
 import { useAuth } from "../pages/context/AuthContext";
 import SealProgress from "./SealProgress";
+import Portal from "./Portal";
 import Whiteboard from "./Whiteboard";
 import { MessageCircle, Video as VideoIcon, Cpu, Mic, MicOff, Video as Cam, VideoOff, ChevronLeft, ChevronRight } from "lucide-react";
 
@@ -314,6 +315,122 @@ const LearnerGuide = ({ title, url, chapters, onComplete }) => {
   );
 };
 
+const YoutubeModal = ({ video, onClose }) => {
+  const videoId = (() => {
+    try {
+      const url = new URL(video.url);
+      if (url.hostname.includes("youtu.be")) return url.pathname.slice(1);
+      return url.searchParams.get("v") || "";
+    } catch {
+      return "";
+    }
+  })();
+
+  return (
+    <Portal>
+      <div onClick={onClose} className="fixed inset-0 bg-black/60 z-30" />
+      <div className="fixed inset-0 z-40 flex items-center justify-center p-4">
+        <div className="relative w-full max-w-2xl">
+          <button onClick={onClose} className="absolute -top-10 right-0 text-white text-sm">Close</button>
+          <div className="rounded-xl overflow-hidden" style={{ aspectRatio: "16/9" }}>
+            {videoId ? (
+              <iframe
+                src={`https://www.youtube.com/embed/${videoId}`}
+                className="w-full h-full"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center bg-white text-sm text-gray-500">
+                Couldn't load this video, <a href={video.url} target="_blank" rel="noopener noreferrer" className="underline ml-1">open it directly</a>.
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </Portal>
+  );
+};
+
+const ReadingModal = ({ link, onClose }) => (
+  <Portal>
+    <div onClick={onClose} className="fixed inset-0 bg-black/60 z-30" />
+    <div className="fixed inset-4 md:inset-10 z-40 rounded-xl overflow-hidden bg-white flex flex-col">
+      <div className="flex items-center justify-between p-3 border-b" style={{ borderColor: "var(--border-soft)" }}>
+        <p className="text-sm font-medium truncate" style={{ color: "var(--text)" }}>{link.title}</p>
+        <div className="flex items-center gap-3">
+          <a href={link.url} target="_blank" rel="noopener noreferrer" className="text-xs" style={{ color: "var(--brand-color)" }}>Open in new tab</a>
+          <button onClick={onClose} className="text-sm text-gray-500">Close</button>
+        </div>
+      </div>
+      <iframe src={link.url} className="flex-1 w-full" />
+    </div>
+  </Portal>
+);
+
+const ResourcesPanel = ({ unitWeek }) => {
+  const [activeVideo, setActiveVideo] = useState(null);
+  const [activeReading, setActiveReading] = useState(null);
+  const voiceRecordings = unitWeek?.voice_recordings || [];
+  const youtubeLinks = unitWeek?.youtube_links || [];
+  const readingLinks = unitWeek?.reading_links || [];
+
+  if (voiceRecordings.length === 0 && youtubeLinks.length === 0 && readingLinks.length === 0) {
+    return <div className="paper p-8 text-center text-gray-500 text-sm">No extra resources added for this week yet.</div>;
+  }
+
+  return (
+    <div className="space-y-4">
+      {voiceRecordings.length > 0 && (
+        <div className="paper p-6">
+          <h2 className="font-display text-lg font-semibold mb-3" style={{ color: "var(--text)" }}>Voice Recordings</h2>
+          <div className="space-y-3">
+            {voiceRecordings.map((v, i) => (
+              <div key={i}>
+                <p className="text-xs text-gray-500 mb-1">{v.label}</p>
+                <audio controls src={v.url} className="w-full" />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {youtubeLinks.length > 0 && (
+        <div className="paper p-6">
+          <h2 className="font-display text-lg font-semibold mb-3" style={{ color: "var(--text)" }}>Videos</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {youtubeLinks.map((y, i) => (
+              <button key={i} onClick={() => setActiveVideo(y)} className="p-4 rounded-xl text-left text-sm font-medium hover:opacity-80" style={{ background: "var(--paper-muted)", color: "var(--text)" }}>
+                Watch: {y.title}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {readingLinks.length > 0 && (
+        <div className="paper p-6">
+          <h2 className="font-display text-lg font-semibold mb-3" style={{ color: "var(--text)" }}>Further Reading</h2>
+          <ul className="space-y-2">
+            {readingLinks.map((r, i) => (
+              <li key={i}>
+                {r.viewMode === "modal" ? (
+                  <button onClick={() => setActiveReading(r)} className="text-sm font-medium hover:underline" style={{ color: "var(--brand-color)" }}>{r.title}</button>
+                ) : (
+                  <a href={r.url} target="_blank" rel="noopener noreferrer" className="text-sm font-medium hover:underline" style={{ color: "var(--brand-color)" }}>{r.title}</a>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {activeVideo && <YoutubeModal video={activeVideo} onClose={() => setActiveVideo(null)} />}
+      {activeReading && <ReadingModal link={activeReading} onClose={() => setActiveReading(null)} />}
+    </div>
+  );
+};
+
 const ChatPanel = ({ enrollment }) => {
   const supabase = createClient();
   const [messages, setMessages] = useState([]);
@@ -550,10 +667,11 @@ export default function ModulePlayer({ enrollmentId }) {
     );
   }
 
-  const activities = [
+    const activities = [
     { key: "intro", label: "Facilitator Intro" },
     { key: "teams", label: "Teams Session / Video" },
     { key: "guide", label: "Learner Guide" },
+    { key: "resources", label: "Resources" },
     { key: "workbook", label: "Learner Workbook" },
     { key: "knowledge", label: "Knowledge Module" },
     { key: "summative", label: "Summative Assessment" },
@@ -640,9 +758,11 @@ export default function ModulePlayer({ enrollmentId }) {
             </div>
           )}
 
-          {currentActivity === "guide" && (
-            <LearnerGuide title="Learner Guide" url={unitWeek?.learner_guide_url} chapters={unitWeek?.chapters || [{ title: "Chapter 1: Intro", content: "No content yet." }]} onComplete={() => setCurrentActivity(null)} />
+                    {currentActivity === "guide" && (
+            <LearnerGuide title="Learner Guide" url={unitWeek?.learner_guide_url} chapters={unitWeek?.guide_chapters?.length ? unitWeek.guide_chapters : [{ title: "Chapter 1", content: "No content added for this week's guide yet." }]} onComplete={() => setCurrentActivity(null)} />
           )}
+
+          {currentActivity === "resources" && <ResourcesPanel unitWeek={unitWeek} />}
 
           {currentActivity === "teams" && (
             <>
