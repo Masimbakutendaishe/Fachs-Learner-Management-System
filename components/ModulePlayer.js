@@ -56,7 +56,7 @@ const ResourceCard = ({ label, url }) => {
   );
 };
 
-const TeamsSession = ({ url, startDate, sessionDatetime, enrollment }) => {
+const TeamsSession = ({ url, startDate, sessionDatetime, enrollment, dailyRoomUrl }) => {
   const supabase = createClient();
   const [micOn, setMicOn] = useState(true);
   const [camOn, setCamOn] = useState(true);
@@ -135,24 +135,36 @@ const TeamsSession = ({ url, startDate, sessionDatetime, enrollment }) => {
           {new Date(sessionDatetime).toLocaleString()} - {countdown}
         </p>
       )}
-      <div className="w-full h-56 rounded-xl mb-4 flex items-center justify-center overflow-hidden" style={{ background: "var(--paper-muted)" }}>
-        {hasPermission && camOn ? (
-          <video ref={videoRef} autoPlay muted playsInline className="w-full h-full object-cover" />
-        ) : (
-          <span className="text-gray-400 text-sm">Camera preview</span>
-        )}
-      </div>
-      <div className="flex justify-center gap-3 mb-6">
-        <button onClick={() => setMicOn((v) => !v)} className={`px-4 py-2 rounded-full text-white shadow transition-colors ${micOn ? "bg-emerald-600" : "bg-red-500"}`}>
-          {micOn ? <Mic size={18} /> : <MicOff size={18} />}
-        </button>
-        <button onClick={() => setCamOn((v) => !v)} className={`px-4 py-2 rounded-full text-white shadow transition-colors ${camOn ? "bg-emerald-600" : "bg-red-500"}`}>
-          {camOn ? <Cam size={18} /> : <VideoOff size={18} />}
-        </button>
-      </div>
-      <div className="flex justify-center">
-        {url ? <LinkButton href={url}>Join Meeting</LinkButton> : <p className="text-sm text-gray-400">No Teams/video link set for this week yet.</p>}
-      </div>
+            {dailyRoomUrl ? (
+        <div className="rounded-xl overflow-hidden mb-2" style={{ aspectRatio: "16/9" }}>
+          <iframe
+            src={dailyRoomUrl}
+            allow="camera; microphone; fullscreen; display-capture; autoplay"
+            className="w-full h-full border-0"
+          />
+        </div>
+      ) : (
+        <>
+          <div className="w-full h-56 rounded-xl mb-4 flex items-center justify-center overflow-hidden" style={{ background: "var(--paper-muted)" }}>
+            {hasPermission && camOn ? (
+              <video ref={videoRef} autoPlay muted playsInline className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-gray-400 text-sm">Camera preview</span>
+            )}
+          </div>
+          <div className="flex justify-center gap-3 mb-6">
+            <button onClick={() => setMicOn((v) => !v)} className={`px-4 py-2 rounded-full text-white shadow transition-colors ${micOn ? "bg-emerald-600" : "bg-red-500"}`}>
+              {micOn ? <Mic size={18} /> : <MicOff size={18} />}
+            </button>
+            <button onClick={() => setCamOn((v) => !v)} className={`px-4 py-2 rounded-full text-white shadow transition-colors ${camOn ? "bg-emerald-600" : "bg-red-500"}`}>
+              {camOn ? <Cam size={18} /> : <VideoOff size={18} />}
+            </button>
+          </div>
+          <div className="flex justify-center">
+            {url ? <LinkButton href={url}>Join Meeting</LinkButton> : <p className="text-sm text-gray-400">No video link set for this week yet.</p>}
+          </div>
+        </>
+      )}
     </div>
   );
 };
@@ -1511,11 +1523,12 @@ export default function ModulePlayer({ enrollmentId }) {
 
           {currentActivity === "teams" && (
             <>
-                           <TeamsSession
+                                        <TeamsSession
                 url={unitWeek?.video_url || unitWeek?.teams_session_link}
                 startDate={unitWeek?.week_start_date}
                 sessionDatetime={unitWeek?.session_datetime}
                 enrollment={enrollment}
+                dailyRoomUrl={unitWeek?.daily_room_url}
               />
               <ResourceCard label="Open Teams / Video link" url={unitWeek?.video_url || unitWeek?.teams_session_link} />
             </>

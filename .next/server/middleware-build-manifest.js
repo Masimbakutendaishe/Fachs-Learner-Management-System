@@ -3,32 +3,25 @@ self.__BUILD_MANIFEST = {
     "static/chunks/polyfills.js"
   ],
   "devFiles": [
-    "static/chunks/react-refresh.js"
+    "static/chunks/fallback/react-refresh.js"
   ],
-  "ampDevFiles": [],
+  "ampDevFiles": [
+    "static/chunks/fallback/webpack.js",
+    "static/chunks/fallback/amp.js"
+  ],
   "lowPriorityFiles": [],
   "rootMainFiles": [],
   "rootMainFilesTree": {},
   "pages": {
     "/_app": [
-      "static/chunks/webpack.js",
-      "static/chunks/main.js",
-      "static/chunks/pages/_app.js"
+      "static/chunks/fallback/webpack.js",
+      "static/chunks/fallback/main.js",
+      "static/chunks/fallback/pages/_app.js"
     ],
     "/_error": [
-      "static/chunks/webpack.js",
-      "static/chunks/main.js",
-      "static/chunks/pages/_error.js"
-    ],
-    "/module-player/facilitator/[id]": [
-      "static/chunks/webpack.js",
-      "static/chunks/main.js",
-      "static/chunks/pages/module-player/facilitator/[id].js"
-    ],
-    "/module-player/facilitator/[id]/modules": [
-      "static/chunks/webpack.js",
-      "static/chunks/main.js",
-      "static/chunks/pages/module-player/facilitator/[id]/modules.js"
+      "static/chunks/fallback/webpack.js",
+      "static/chunks/fallback/main.js",
+      "static/chunks/fallback/pages/_error.js"
     ]
   },
   "ampFirstPages": []

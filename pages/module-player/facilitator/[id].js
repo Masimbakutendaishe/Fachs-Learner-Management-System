@@ -912,6 +912,7 @@ function WeekModal({ week, onClose, onSaved }) {
     week_end_date: week.week_end_date || "",
     facilitator_intro: week.facilitator_intro || "",
     teams_session_link: week.teams_session_link || "",
+    daily_room_url: week.daily_room_url || "",
     session_datetime: toLocalInput(week.session_datetime),
     video_url: week.video_url || "",
     learner_guide_url: week.learner_guide_url || "",
@@ -952,7 +953,55 @@ function WeekModal({ week, onClose, onSaved }) {
 
   const handleFieldChange = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
 
-  const handleScheduleTeamsMeeting = async () => {
+    const handleCreateDailyRoom = async () => {
+    setSchedulingMeeting(true);
+    try {
+      const res = await fetch("/api/create-daily-room", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ weekTitle: form.unit_standard_title, sessionDatetime: form.session_datetime }),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      handleFieldChange("daily_room_url", data.roomUrl);
+      alert("In-platform video room created and linked.");
+    } catch (err) {
+      alert("Could not create video room: " + err.message);
+    } finally {
+      setSchedulingMeeting(false);
+    }
+  };
+
+                  {!readOnly && (
+                  <div className="flex gap-2 mt-2">
+                    <button
+                      type="button"
+                      disabled={!form.session_datetime || schedulingMeeting}
+                      onClick={handleScheduleTeamsMeeting}
+                      className="px-3 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
+                      style={{ border: "1px solid var(--border-soft)", color: "var(--text)" }}
+                    >
+                      {schedulingMeeting ? "Working..." : "Schedule Teams Meeting"}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={schedulingMeeting}
+                      onClick={handleCreateDailyRoom}
+                      className="px-3 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
+                      style={{ border: "1px solid var(--border-soft)", color: "var(--text)" }}
+                    >
+                      {schedulingMeeting ? "Working..." : "Create In-Platform Video Room"}
+                    </button>
+                  </div>
+                )}
+                {form.teams_session_link && (
+                  <p className="text-xs mt-1" style={{ color: "var(--seal-gold)" }}>Teams meeting link ready</p>
+                )}
+                {form.daily_room_url && (
+                  <p className="text-xs mt-1" style={{ color: "var(--seal-gold)" }}>In-platform video room ready</p>
+                )}
+              </div>
+            )}
     setSchedulingMeeting(true);
     try {
       const start = new Date(form.session_datetime);
