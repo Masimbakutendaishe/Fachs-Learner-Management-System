@@ -530,9 +530,17 @@ function SubmissionRow({ sub, supabase, onGraded }) {
           graded_at: new Date().toISOString(),
         })
         .eq("id", sub.id)
-        .select("user_id, institution_id")
+                .select("user_id, institution_id")
         .single();
       if (error) throw error;
+
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      await supabase.from("activity_log").insert({
+        institution_id: updated.institution_id,
+        actor_id: currentUser.id,
+        action: "submission_graded",
+        details: `${ACTIVITY_LABELS[sub.activity_type] || sub.activity_type} graded ${draft.grade ?? ""}`,
+      });
 
       await supabase.from("notifications").insert({
         user_id: updated.user_id,

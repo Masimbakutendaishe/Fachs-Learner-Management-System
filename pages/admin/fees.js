@@ -151,7 +151,15 @@ function CreateInvoiceModal({ institution, onClose, onCreated }) {
         amount: Number(amount),
         due_date: dueDate || null,
       });
-      if (error) throw error;
+            if (error) throw error;
+
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      await supabase.from("activity_log").insert({
+        institution_id: institution.id,
+        actor_id: currentUser.id,
+        action: "invoice_created",
+        details: `${description} - $${amount}`,
+      });
 
       await supabase.from("notifications").insert({
         user_id: userId,

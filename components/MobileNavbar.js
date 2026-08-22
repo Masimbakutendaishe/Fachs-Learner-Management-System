@@ -75,8 +75,26 @@ export default function MobileNavbar() {
           { name: "Qualifications", href: "/qualifications" },
         ];
 
-  return (
+    return (
     <nav className="flex justify-between items-center h-16 relative" style={{ color: "var(--text)" }}>
+      {isAuthenticated && isPlatformRole && (
+        <div className="hidden md:flex absolute left-1/2 -translate-x-1/2 items-center gap-2">
+          <Link
+            href={profile?.role === "superadmin" ? "/superadmin" : "/admin/institution-settings"}
+            title="Dashboard"
+            className="p-2.5 rounded-lg hover:bg-black/5 transition-colors"
+          >
+            <LayoutDashboard size={20} className="text-[var(--text-muted)]" />
+          </Link>
+          <Link
+            href={profile?.role === "superadmin" ? "/superadmin/users" : "/admin/users"}
+            title="Manage Users"
+            className="p-2.5 rounded-lg hover:bg-black/5 transition-colors"
+          >
+            <UserCog size={20} className="text-[var(--text-muted)]" />
+          </Link>
+        </div>
+      )}
       <Link href="/" className="flex items-center gap-2 font-display font-semibold text-lg tracking-tight">
         {institution?.logo_url ? (
           <img src={institution.logo_url} alt={institution.name} className="h-8 w-auto object-contain" />
@@ -112,49 +130,49 @@ export default function MobileNavbar() {
             </Link>
           </div>
         )}
-        {isAuthenticated && !isPlatformRole && (
-          <>
-            <Link
-              href={profile?.role === "facilitator" ? "/facilitator/dashboard" : "/dashboard"}
-              className="p-2 rounded-lg hover:bg-black/5 transition-colors"
+                {isAuthenticated && !isPlatformRole && (
+          <Link
+            href={profile?.role === "facilitator" ? "/facilitator/dashboard" : "/dashboard"}
+            className="p-2 rounded-lg hover:bg-black/5 transition-colors"
+          >
+            <LayoutDashboard size={18} className="text-[var(--text-muted)]" />
+          </Link>
+        )}
+        {isAuthenticated && (
+          <div className="relative">
+            <button
+              onClick={() => { setShowNotifs((v) => !v); if (!showNotifs) markAllRead(); }}
+              className="p-2 rounded-lg hover:bg-black/5 transition-colors relative"
             >
-              <LayoutDashboard size={18} className="text-[var(--text-muted)]" />
-            </Link>
-            <div className="relative">
-              <button
-                onClick={() => { setShowNotifs((v) => !v); if (!showNotifs) markAllRead(); }}
-                className="p-2 rounded-lg hover:bg-black/5 transition-colors relative"
-              >
-                <Bell size={18} className="text-[var(--text-muted)]" />
-                {unreadCount > 0 && (
-                  <span className="absolute top-0 right-0 w-4 h-4 rounded-full text-white text-[10px] flex items-center justify-center" style={{ background: "var(--brand-color)" }}>
-                    {unreadCount}
-                  </span>
-                )}
-              </button>
-              {showNotifs && (
-                <div className="absolute right-0 mt-2 w-80 max-w-[90vw] max-h-96 overflow-y-auto rounded-xl shadow-2xl border z-50" style={{ background: "var(--surface)", borderColor: "var(--border-soft)", "--text": "#101828", "--text-muted": "#667085" }}>
-                  {notifications.length === 0 ? (
-                    <p className="p-4 text-sm text-[var(--text-muted)] text-center">No notifications yet.</p>
-                  ) : (
-                    notifications.map((n) => (
-                      <Link
-                        key={n.id}
-                        href={n.link || "#"}
-                        onClick={() => setShowNotifs(false)}
-                        className="block px-4 py-3 border-b last:border-0 hover:bg-white/5 transition-colors"
-                        style={{ borderColor: "var(--border-soft)" }}
-                      >
-                        <p className="text-sm font-medium text-white">{n.title}</p>
-                        {n.body && <p className="text-xs text-[var(--text-muted)] mt-0.5">{n.body}</p>}
-                        <p className="text-xs text-[var(--text-muted)] mt-1 font-mono">{new Date(n.created_at).toLocaleDateString()}</p>
-                      </Link>
-                    ))
-                  )}
-                </div>
+              <Bell size={18} className="text-[var(--text-muted)]" />
+              {unreadCount > 0 && (
+                <span className="absolute top-0 right-0 w-4 h-4 rounded-full text-white text-[10px] flex items-center justify-center" style={{ background: "var(--brand-color)" }}>
+                  {unreadCount}
+                </span>
               )}
-            </div>
-          </>
+            </button>
+            {showNotifs && (
+              <div className="absolute right-0 mt-2 w-80 max-w-[90vw] max-h-96 overflow-y-auto rounded-xl shadow-2xl border z-50" style={{ background: "var(--surface)", borderColor: "var(--border-soft)", "--text": "#101828", "--text-muted": "#667085" }}>
+                {notifications.length === 0 ? (
+                  <p className="p-4 text-sm text-[var(--text-muted)] text-center">No notifications yet.</p>
+                ) : (
+                  notifications.map((n) => (
+                    <Link
+                      key={n.id}
+                      href={n.link || "#"}
+                      onClick={() => setShowNotifs(false)}
+                      className="block px-4 py-3 border-b last:border-0 hover:bg-white/5 transition-colors"
+                      style={{ borderColor: "var(--border-soft)" }}
+                    >
+                      <p className="text-sm font-medium text-white">{n.title}</p>
+                      {n.body && <p className="text-xs text-[var(--text-muted)] mt-0.5">{n.body}</p>}
+                      <p className="text-xs text-[var(--text-muted)] mt-1 font-mono">{new Date(n.created_at).toLocaleDateString()}</p>
+                    </Link>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
         )}
 
         {!isAuthenticated ? (
