@@ -4,6 +4,7 @@ import { useRouter } from "next/router";
 import { createClient } from "../../../lib/supabase/client";
 import Portal from "../../../components/Portal";
 import Whiteboard from "../../../components/Whiteboard";
+import Link from "next/link";
 import { Plus, Pencil, Eye, Calendar, ArrowLeft } from "lucide-react";
 
 const FIELDS = [
@@ -180,7 +181,12 @@ export default function FacilitatorCoursePage() {
       </button>
 
       <p className="text-xs font-mono text-[var(--text-muted)] mb-1">FACILITATOR</p>
-      <h1 className="font-display text-3xl font-semibold mb-6" style={{ color: "var(--text)" }}>{programme.name}</h1>
+            <div className="flex items-center justify-between gap-3 mb-6 flex-wrap">
+        <h1 className="font-display text-3xl font-semibold" style={{ color: "var(--text)" }}>{programme.name}</h1>
+        <Link href={`/module-player/facilitator/${id}/modules`} className="px-4 py-2 rounded-lg text-sm font-medium" style={{ border: "1px solid var(--border-soft)", color: "var(--text)" }}>
+          Qualification Modules
+        </Link>
+      </div>
 
             <div className="flex justify-center mb-6">
         <div className="paper p-1.5 flex gap-1 flex-wrap justify-center rounded-2xl">
