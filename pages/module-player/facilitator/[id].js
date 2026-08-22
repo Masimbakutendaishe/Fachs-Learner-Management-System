@@ -635,11 +635,19 @@ function WeekModal({ week, onClose, onSaved }) {
     knowledge_module_url: week.knowledge_module_url || "",
     summative_assessment_url: week.summative_assessment_url || "",
   });
-  const [uploading, setUploading] = useState(null);
+    const [uploading, setUploading] = useState(null);
   const [saving, setSaving] = useState(false);
   const [schedulingMeeting, setSchedulingMeeting] = useState(false);
   const [questions, setQuestions] = useState(week.activity_questions || { workbook: [], knowledge: [], summative: [], practical: [] });
   const [newQuestionText, setNewQuestionText] = useState({ workbook: "", knowledge: "", summative: "", practical: "" });
+  const [chapters, setChapters] = useState(week.guide_chapters || []);
+  const [extractingChapters, setExtractingChapters] = useState(false);
+  const [voiceRecordings, setVoiceRecordings] = useState(week.voice_recordings || []);
+  const [uploadingVoice, setUploadingVoice] = useState(false);
+  const [youtubeLinks, setYoutubeLinks] = useState(week.youtube_links || []);
+  const [newYoutube, setNewYoutube] = useState({ title: "", url: "" });
+  const [readingLinks, setReadingLinks] = useState(week.reading_links || []);
+  const [newReading, setNewReading] = useState({ title: "", url: "", viewMode: "modal" });
 
   const handleFieldChange = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
 
@@ -669,7 +677,59 @@ function WeekModal({ week, onClose, onSaved }) {
     }
   };
 
-  const [generatingFor, setGeneratingFor] = useState(null);
+    const [generatingFor, setGeneratingFor] = useState(null);
+
+  const extractChapters = async () => {
+    if (!form.learner_guide_url) return alert("Upload the Learner Guide first.");
+    setExtractingChapters(true);
+    try {
+      const res = await fetch("/api/generate-chapters-from-pdf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fileUrl: form.learner_guide_url }),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      setChapters(data.chapters);
+    } catch (err) {
+      alert("Could not extract chapters: " + err.message);
+    } finally {
+      setExtractingChapters(false);
+    }
+  };
+
+  const removeChapter = (i) => setChapters((prev) => prev.filter((_, idx) => idx !== i));
+
+  const handleVoiceUpload = async (file) => {
+    setUploadingVoice(true);
+    try {
+      const path = `${week.programme_id}/voice_${Date.now()}_${file.name}`;
+      const { error: uploadError } = await supabase.storage.from("programme-content").upload(path, file);
+      if (uploadError) throw uploadError;
+      const { data } = supabase.storage.from("programme-content").getPublicUrl(path);
+      setVoiceRecordings((prev) => [...prev, { url: data.publicUrl, label: file.name }]);
+    } catch (err) {
+      alert("Upload failed: " + err.message);
+    } finally {
+      setUploadingVoice(false);
+    }
+  };
+
+  const removeVoice = (i) => setVoiceRecordings((prev) => prev.filter((_, idx) => idx !== i));
+
+  const addYoutube = () => {
+    if (!newYoutube.url.trim()) return;
+    setYoutubeLinks((prev) => [...prev, { title: newYoutube.title || "Video", url: newYoutube.url }]);
+    setNewYoutube({ title: "", url: "" });
+  };
+  const removeYoutube = (i) => setYoutubeLinks((prev) => prev.filter((_, idx) => idx !== i));
+
+  const addReading = () => {
+    if (!newReading.url.trim()) return;
+    setReadingLinks((prev) => [...prev, { ...newReading, title: newReading.title || newReading.url }]);
+    setNewReading({ title: "", url: "", viewMode: "modal" });
+  };
+  const removeReading = (i) => setReadingLinks((prev) => prev.filter((_, idx) => idx !== i));
 
   const generateFromPdf = async (activityKey, fileUrl) => {
     setGeneratingFor(activityKey);
@@ -719,12 +779,16 @@ function WeekModal({ week, onClose, onSaved }) {
     e.preventDefault();
     setSaving(true);
     try {
-      const payload = {
+            const payload = {
         ...form,
         session_datetime: form.session_datetime ? new Date(form.session_datetime).toISOString() : null,
         programme_id: week.programme_id,
         institution_id: week.institution_id,
         activity_questions: questions,
+        guide_chapters: chapters,
+        voice_recordings: voiceRecordings,
+        youtube_links: youtubeLinks,
+        reading_links: readingLinks,
       };
       const isNewWeek = !week.id;
       const { error } = isNewWeek
@@ -840,9 +904,113 @@ function WeekModal({ week, onClose, onSaved }) {
                       <a href={form[f.key]} target="_blank" rel="noopener noreferrer" className="text-xs" style={{ color: "var(--brand-color)" }}>Uploaded</a>
                     )}
                   </div>
-                )}
+                                )}
               </div>
             ))}
+
+            <div className="pt-2 border-t" style={{ borderColor: "var(--border-soft)" }}>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs text-[var(--text-muted)]">Learner Guide Chapters</label>
+                {!readOnly && form.learner_guide_url && (
+                  <button type="button" onClick={extractChapters} disabled={extractingChapters} className="text-xs font-medium disabled:opacity-50" style={{ color: "var(--seal-gold)" }}>
+                    {extractingChapters ? "Extracting..." : "Extract from PDF"}
+                  </button>
+                )}
+              </div>
+              {chapters.length === 0 ? (
+                <p className="text-xs text-gray-400">No chapters yet. Upload the Learner Guide above, then extract, or add manually below.</p>
+              ) : (
+                <ul className="space-y-1 mb-2">
+                  {chapters.map((c, i) => (
+                    <li key={i} className="flex items-center justify-between gap-2 text-sm p-2 rounded-lg" style={{ background: "var(--paper-muted)" }}>
+                      <span className="text-gray-700 truncate">{i + 1}. {c.title}</span>
+                      {!readOnly && <button type="button" onClick={() => removeChapter(i)} className="text-xs text-red-500 hover:underline flex-shrink-0">Remove</button>}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {!readOnly && (
+                <button
+                  type="button"
+                  onClick={() => setChapters((prev) => [...prev, { title: `Chapter ${prev.length + 1}`, content: "" }])}
+                  className="text-xs font-medium" style={{ color: "var(--brand-color)" }}
+                >
+                  + Add chapter manually
+                </button>
+              )}
+            </div>
+
+            <div className="pt-2 border-t" style={{ borderColor: "var(--border-soft)" }}>
+              <label className="block text-xs text-[var(--text-muted)] mb-1">Voice Recordings</label>
+              {voiceRecordings.length > 0 && (
+                <ul className="space-y-1 mb-2">
+                  {voiceRecordings.map((v, i) => (
+                    <li key={i} className="flex items-center justify-between gap-2 text-sm p-2 rounded-lg" style={{ background: "var(--paper-muted)" }}>
+                      <a href={v.url} target="_blank" rel="noopener noreferrer" className="truncate" style={{ color: "var(--brand-color)" }}>{v.label}</a>
+                      {!readOnly && <button type="button" onClick={() => removeVoice(i)} className="text-xs text-red-500 hover:underline flex-shrink-0">Remove</button>}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {!readOnly && (
+                <div className="flex items-center gap-3">
+                  <input type="file" accept="audio/*" onChange={(e) => e.target.files[0] && handleVoiceUpload(e.target.files[0])} className="text-sm text-gray-500" />
+                  {uploadingVoice && <span className="text-xs text-[var(--seal-gold)] font-mono">Uploading...</span>}
+                </div>
+              )}
+            </div>
+
+            <div className="pt-2 border-t" style={{ borderColor: "var(--border-soft)" }}>
+              <label className="block text-xs text-[var(--text-muted)] mb-1">YouTube Videos</label>
+              {youtubeLinks.length > 0 && (
+                <ul className="space-y-1 mb-2">
+                  {youtubeLinks.map((y, i) => (
+                    <li key={i} className="flex items-center justify-between gap-2 text-sm p-2 rounded-lg" style={{ background: "var(--paper-muted)" }}>
+                      <span className="truncate text-gray-700">{y.title}</span>
+                      {!readOnly && <button type="button" onClick={() => removeYoutube(i)} className="text-xs text-red-500 hover:underline flex-shrink-0">Remove</button>}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {!readOnly && (
+                <div className="flex gap-2">
+                  <input type="text" placeholder="Title" value={newYoutube.title} onChange={(e) => setNewYoutube((p) => ({ ...p, title: e.target.value }))} className={`${inputClass} flex-1`} style={{ borderColor: "var(--border-soft)" }} />
+                  <input type="url" placeholder="YouTube URL" value={newYoutube.url} onChange={(e) => setNewYoutube((p) => ({ ...p, url: e.target.value }))} className={`${inputClass} flex-1`} style={{ borderColor: "var(--border-soft)" }} />
+                  <button type="button" onClick={addYoutube} className="px-3 py-2 rounded-lg text-sm font-medium" style={{ border: "1px solid var(--border-soft)", color: "var(--text)" }}>Add</button>
+                </div>
+              )}
+            </div>
+
+            <div className="pt-2 border-t" style={{ borderColor: "var(--border-soft)" }}>
+              <label className="block text-xs text-[var(--text-muted)] mb-1">Reading Links</label>
+              {readingLinks.length > 0 && (
+                <ul className="space-y-1 mb-2">
+                  {readingLinks.map((r, i) => (
+                    <li key={i} className="flex items-center justify-between gap-2 text-sm p-2 rounded-lg" style={{ background: "var(--paper-muted)" }}>
+                      <span className="truncate text-gray-700">{r.title} <span className="text-gray-400">({r.viewMode === "modal" ? "in-site" : "new tab"})</span></span>
+                      {!readOnly && <button type="button" onClick={() => removeReading(i)} className="text-xs text-red-500 hover:underline flex-shrink-0">Remove</button>}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {!readOnly && (
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <input type="text" placeholder="Title" value={newReading.title} onChange={(e) => setNewReading((p) => ({ ...p, title: e.target.value }))} className={`${inputClass} flex-1`} style={{ borderColor: "var(--border-soft)" }} />
+                    <input type="url" placeholder="URL" value={newReading.url} onChange={(e) => setNewReading((p) => ({ ...p, url: e.target.value }))} className={`${inputClass} flex-1`} style={{ borderColor: "var(--border-soft)" }} />
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <label className="flex items-center gap-1 text-xs text-gray-600">
+                      <input type="radio" checked={newReading.viewMode === "modal"} onChange={() => setNewReading((p) => ({ ...p, viewMode: "modal" }))} /> Open in-site
+                    </label>
+                    <label className="flex items-center gap-1 text-xs text-gray-600">
+                      <input type="radio" checked={newReading.viewMode === "newtab"} onChange={() => setNewReading((p) => ({ ...p, viewMode: "newtab" }))} /> Open in new tab
+                    </label>
+                    <button type="button" onClick={addReading} className="ml-auto px-3 py-2 rounded-lg text-sm font-medium" style={{ border: "1px solid var(--border-soft)", color: "var(--text)" }}>Add</button>
+                  </div>
+                </div>
+              )}
+            </div>
 
             {["workbook", "knowledge", "summative", "practical"].map((activityKey) => (
               <div key={activityKey} className="pt-2 border-t" style={{ borderColor: "var(--border-soft)" }}>
