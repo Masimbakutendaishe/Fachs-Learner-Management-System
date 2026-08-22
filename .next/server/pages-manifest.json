@@ -2,7 +2,8 @@
   "/_app": "pages/_app.js",
   "/_document": "pages/_document.js",
   "/_error": "pages/_error.js",
-  "/admin/institution-settings": "pages/admin/institution-settings.js",
   "/facilitator/dashboard": "pages/facilitator/dashboard.js",
-  "/module-player/facilitator/[id]": "pages/module-player/facilitator/[id].js"
+  "/": "pages/index.js",
+  "/module-player/facilitator/[id]": "pages/module-player/facilitator/[id].js",
+  "/admin/institution-settings": "pages/admin/institution-settings.js"
 }

@@ -38,13 +38,14 @@ export default function FacilitatorDashboard() {
 
       if (progErr) console.error("Error fetching programmes:", progErr);
       else
-        setFacilitations(
+                setFacilitations(
           (programmes || []).map((p) => ({
             id: p.id,
             qualifications: {
               name: p.name,
               nqf_level: p.nqf_level,
               credits: p.credits_total,
+              image_url: p.image_url,
             },
             start_date: p.start_date || null,
             end_date: p.end_date || null,
@@ -123,35 +124,40 @@ export default function FacilitatorDashboard() {
               {facilitations.map((f, i) => {
                 const q = f.qualifications;
                 return (
-                  <li
+                                              <li
                     key={f.id}
-                    className={`paper p-5 card-lift animate-fade-up stagger-${Math.min(i + 1, 4)}`}
+                    className={`paper overflow-hidden card-lift animate-fade-up stagger-${Math.min(i + 1, 4)}`}
                   >
-                    <div className="flex items-start justify-between gap-3 mb-3">
-                      <div>
-                        <span
-                          className="inline-block text-xs font-mono px-2 py-1 rounded-full mb-2"
-                          style={{ background: "var(--seal-gold-soft)", color: "var(--seal-gold)" }}
-                        >
-                          NQF {q?.nqf_level || "TBA"}
-                        </span>
-                        <h3 className="font-display font-semibold" style={{ color: "var(--text)" }}>
-                          {q?.name}
-                        </h3>
+                    {q?.image_url && (
+                      <img src={q.image_url} alt={q.name} className="w-full h-32 object-cover" />
+                    )}
+                    <div className="p-5">
+                      <div className="flex items-start justify-between gap-3 mb-3">
+                        <div>
+                          <span
+                            className="inline-block text-xs font-mono px-2 py-1 rounded-full mb-2"
+                            style={{ background: "var(--seal-gold-soft)", color: "var(--seal-gold)" }}
+                          >
+                            NQF {q?.nqf_level || "TBA"}
+                          </span>
+                          <h3 className="font-display font-semibold" style={{ color: "var(--text)" }}>
+                            {q?.name}
+                          </h3>
+                        </div>
                       </div>
+                      <p className="text-xs text-gray-400 font-mono mb-3">
+                        {f.start_date ? new Date(f.start_date).toLocaleDateString() : "Start TBA"} –{" "}
+                        {f.end_date ? new Date(f.end_date).toLocaleDateString() : "Ongoing"}
+                        {" · "}{q?.credits || "TBA"} credits
+                      </p>
+                      <Link
+                        href={`/module-player/facilitator/${f.id}`}
+                        className="text-sm font-medium"
+                        style={{ color: "var(--brand-color)" }}
+                      >
+                        Go to modules →
+                      </Link>
                     </div>
-                    <p className="text-xs text-gray-400 font-mono mb-3">
-                      {f.start_date ? new Date(f.start_date).toLocaleDateString() : "Start TBA"} –{" "}
-                      {f.end_date ? new Date(f.end_date).toLocaleDateString() : "Ongoing"}
-                      {" · "}{q?.credits || "TBA"} credits
-                    </p>
-                    <Link
-                      href={`/module-player/facilitator/${f.id}`}
-                      className="text-sm font-medium"
-                      style={{ color: "var(--brand-color)" }}
-                    >
-                      Go to modules →
-                    </Link>
                   </li>
                 );
               })}
