@@ -176,6 +176,19 @@ const AnswerMediaUpload = ({ accept, value, onChange, label }) => {
   );
 };
 
+async function notifyFacilitatorOfSubmission(supabase, enrollment, activityLabel) {
+  const facilitatorId = enrollment.programmes?.facilitator_id;
+  if (!facilitatorId) return;
+  await supabase.from("notifications").insert({
+    user_id: facilitatorId,
+    institution_id: enrollment.institution_id,
+    type: "submission",
+    title: "New submission",
+    body: activityLabel,
+    link: `/module-player/facilitator/${enrollment.programme_id}`,
+  });
+}
+
 function normalizeQuestion(q) {
   if (typeof q === "string") return { text: q, type: "free", marks: null, media: null, options: [] };
   return { type: "free", marks: null, media: null, options: [], ...q };
@@ -222,7 +235,7 @@ const PracticalEvidenceUpload = ({ title, questions, onComplete, enrollment, uni
         if (uploadError) throw uploadError;
         fileUrl = path;
       }
-      const { error } = await supabase.from("submissions").insert({
+            const { error } = await supabase.from("submissions").insert({
         enrollment_id: enrollment.id,
         user_id: enrollment.user_id,
         programme_id: enrollment.programme_id,
@@ -232,6 +245,7 @@ const PracticalEvidenceUpload = ({ title, questions, onComplete, enrollment, uni
         file_url: fileUrl,
       });
       if (error) throw error;
+      await notifyFacilitatorOfSubmission(supabase, enrollment, "Practical Evidence submitted");
       onComplete?.(uploads);
     } catch (err) {
       alert("Could not save submission: " + err.message);
@@ -307,7 +321,7 @@ const LearningResource = ({ title, url, questions, onComplete, activityType, enr
   const handleSubmitAnswers = async () => {
     setSubmitting(true);
     try {
-      const { error } = await supabase.from("submissions").insert({
+            const { error } = await supabase.from("submissions").insert({
         enrollment_id: enrollment.id,
         user_id: enrollment.user_id,
         programme_id: enrollment.programme_id,
@@ -317,6 +331,7 @@ const LearningResource = ({ title, url, questions, onComplete, activityType, enr
         answers,
       });
       if (error) throw error;
+      await notifyFacilitatorOfSubmission(supabase, enrollment, `${activityType} submitted`);
       onComplete?.();
     } catch (err) {
       alert("Could not save submission: " + err.message);
@@ -607,7 +622,7 @@ const ModuleQuestionAnswer = ({ module, enrollment, existingSubmission, onSubmit
   const handleSubmit = async () => {
     setSubmitting(true);
     try {
-      const { error } = await supabase.from("submissions").insert({
+            const { error } = await supabase.from("submissions").insert({
         enrollment_id: enrollment.id,
         user_id: enrollment.user_id,
         programme_id: enrollment.programme_id,
@@ -617,6 +632,7 @@ const ModuleQuestionAnswer = ({ module, enrollment, existingSubmission, onSubmit
         answers,
       });
       if (error) throw error;
+      await notifyFacilitatorOfSubmission(supabase, enrollment, `${module.module_type} Module answered`);
       onSubmitted();
     } catch (err) {
       alert("Could not save submission: " + err.message);
@@ -817,7 +833,7 @@ const LogbookPanel = ({ enrollment }) => {
         if (uploadError) throw uploadError;
         proofUrl = path;
       }
-      const { error } = await supabase.from("logbook_entries").insert({
+            const { error } = await supabase.from("logbook_entries").insert({
         enrollment_id: enrollment.id,
         programme_id: enrollment.programme_id,
         institution_id: enrollment.institution_id,
@@ -827,6 +843,7 @@ const LogbookPanel = ({ enrollment }) => {
         proof_url: proofUrl,
       });
       if (error) throw error;
+      await notifyFacilitatorOfSubmission(supabase, enrollment, "New logbook entry");
       setDescription("");
       setProofFile(null);
       fetchEntries();
@@ -981,7 +998,7 @@ const FisaPanel = ({ enrollment }) => {
     setAttempt(data);
   };
 
-  const handleSubmit = async (auto) => {
+    const handleSubmit = async (auto) => {
     if (submitting) return;
     setSubmitting(true);
     const { error } = await supabase
@@ -990,6 +1007,7 @@ const FisaPanel = ({ enrollment }) => {
       .eq("id", attempt.id);
     if (error) alert(error.message);
     else {
+      await notifyFacilitatorOfSubmission(supabase, enrollment, "FISA exam submitted");
       if (auto) alert("Time's up, your exam has been submitted automatically.");
       fetchAll();
     }
@@ -1143,7 +1161,7 @@ const ChatPanel = ({ enrollment }) => {
       .eq("read_by_learner", false);
   };
 
-  const sendMessage = async () => {
+    const sendMessage = async () => {
     if (!input.trim()) return;
     const text = input;
     setInput("");
@@ -1154,8 +1172,20 @@ const ChatPanel = ({ enrollment }) => {
       sender_id: enrollment.user_id,
       body: text,
     });
-    if (error) alert("Could not send message: " + error.message);
-    else fetchMessages();
+    if (error) return alert("Could not send message: " + error.message);
+    fetchMessages();
+
+    const facilitatorId = enrollment.programmes?.facilitator_id;
+    if (facilitatorId) {
+      await supabase.from("notifications").insert({
+        user_id: facilitatorId,
+        institution_id: enrollment.institution_id,
+        type: "chat",
+        title: "New message",
+        body: text.slice(0, 80),
+        link: `/module-player/facilitator/${enrollment.programme_id}`,
+      });
+    }
   };
 
   return (
@@ -1270,7 +1300,7 @@ export default function ModulePlayer({ enrollmentId }) {
         }
         const { data: enrollmentData, error: enrollErr } = await supabase
           .from("enrollments")
-                    .select("id, progress, credits_earned, credits_total, programme_id, user_id, institution_id, programmes ( id, name, qualification_type )")
+                              .select("id, progress, credits_earned, credits_total, programme_id, user_id, institution_id, programmes ( id, name, qualification_type, facilitator_id )")
           .eq("id", enrollmentId)
           .single();
         if (enrollErr || !enrollmentData || enrollmentData.user_id !== userId) {

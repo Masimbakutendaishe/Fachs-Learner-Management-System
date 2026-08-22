@@ -412,6 +412,53 @@ function FacilitatorMessages({ programme, enrolledLearners }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const endRef = useRef(null);
+  const [broadcastMode, setBroadcastMode] = useState(false);
+  const [broadcastText, setBroadcastText] = useState("");
+  const [broadcastTargets, setBroadcastTargets] = useState("all");
+  const [selectedBroadcastLearners, setSelectedBroadcastLearners] = useState([]);
+  const [sendingBroadcast, setSendingBroadcast] = useState(false);
+
+  const toggleBroadcastLearner = (userId) => {
+    setSelectedBroadcastLearners((prev) => prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]);
+  };
+
+  const sendBroadcast = async () => {
+    if (!broadcastText.trim()) return;
+    const targets = broadcastTargets === "all" ? enrolledLearners.map((l) => l.user_id) : selectedBroadcastLearners;
+    if (targets.length === 0) return alert("Select at least one learner.");
+    setSendingBroadcast(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const messageRows = targets.map((learnerId) => ({
+        programme_id: programme.id,
+        institution_id: programme.institution_id,
+        learner_id: learnerId,
+        sender_id: user.id,
+        body: broadcastText,
+      }));
+      const { error } = await supabase.from("chat_messages").insert(messageRows);
+      if (error) throw error;
+
+      await supabase.from("notifications").insert(
+        targets.map((learnerId) => ({
+          user_id: learnerId,
+          institution_id: programme.institution_id,
+          type: "chat",
+          title: "New message from your facilitator",
+          body: broadcastText.slice(0, 80),
+          link: "/progress",
+        }))
+      );
+
+      setBroadcastText("");
+      setSelectedBroadcastLearners([]);
+      alert(`Sent to ${targets.length} learner${targets.length === 1 ? "" : "s"}.`);
+    } catch (err) {
+      alert("Could not send broadcast: " + err.message);
+    } finally {
+      setSendingBroadcast(false);
+    }
+  };
 
   useEffect(() => {
     if (selectedLearner) fetchMessages();
@@ -457,10 +504,67 @@ function FacilitatorMessages({ programme, enrolledLearners }) {
     return <div className="paper p-8 text-center text-gray-500 text-sm">No learners enrolled yet.</div>;
   }
 
+  if (broadcastMode) {
+    return (
+      <div className="paper p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-display text-lg font-semibold" style={{ color: "var(--text)" }}>Broadcast a Message</h2>
+          <button onClick={() => setBroadcastMode(false)} className="text-sm font-medium" style={{ color: "var(--brand-color)" }}>Back to chats</button>
+        </div>
+
+        <div className="flex gap-2 mb-4">
+          <button
+            onClick={() => setBroadcastTargets("all")}
+            className="px-3 py-1.5 rounded-lg text-xs font-medium"
+            style={broadcastTargets === "all" ? { background: "var(--brand-color)", color: "white" } : { background: "var(--paper-muted)", color: "var(--text-muted)" }}
+          >
+            All Learners ({enrolledLearners.length})
+          </button>
+          <button
+            onClick={() => setBroadcastTargets("selected")}
+            className="px-3 py-1.5 rounded-lg text-xs font-medium"
+            style={broadcastTargets === "selected" ? { background: "var(--brand-color)", color: "white" } : { background: "var(--paper-muted)", color: "var(--text-muted)" }}
+          >
+            Select Learners
+          </button>
+        </div>
+
+        {broadcastTargets === "selected" && (
+          <div className="mb-4 max-h-40 overflow-y-auto p-3 rounded-lg" style={{ background: "var(--paper-muted)" }}>
+            {enrolledLearners.map((l) => {
+              const name = l.profiles ? `${l.profiles.first_name || ""} ${l.profiles.surname || ""}`.trim() : "Unknown";
+              return (
+                <label key={l.user_id} className="flex items-center gap-2 py-1.5 text-sm cursor-pointer">
+                  <input type="checkbox" checked={selectedBroadcastLearners.includes(l.user_id)} onChange={() => toggleBroadcastLearner(l.user_id)} />
+                  {name}
+                </label>
+              );
+            })}
+          </div>
+        )}
+
+        <textarea
+          value={broadcastText} onChange={(e) => setBroadcastText(e.target.value)}
+          placeholder="Type your message to send..." rows={4}
+          className="w-full px-3 py-2 rounded-lg border text-sm mb-3" style={{ borderColor: "var(--border-soft)" }}
+        />
+        <button
+          onClick={sendBroadcast} disabled={sendingBroadcast}
+          className="btn-silver px-5 py-2.5 rounded-lg text-sm font-medium disabled:opacity-50"
+        >
+          {sendingBroadcast ? "Sending..." : "Send Broadcast"}
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-[220px_1fr] gap-4">
       <div className="paper p-3 h-fit">
-        <p className="text-xs font-mono text-gray-400 mb-2 px-1">LEARNERS</p>
+        <div className="flex items-center justify-between mb-2 px-1">
+          <p className="text-xs font-mono text-gray-400">LEARNERS</p>
+          <button onClick={() => setBroadcastMode(true)} className="text-xs font-medium" style={{ color: "var(--brand-color)" }}>Broadcast</button>
+        </div>
         <ul className="space-y-1">
           {enrolledLearners.map((l) => {
             const name = l.profiles ? `${l.profiles.first_name || ""} ${l.profiles.surname || ""}`.trim() : "Unknown";
