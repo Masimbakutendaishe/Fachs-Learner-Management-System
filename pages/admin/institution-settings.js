@@ -29,6 +29,7 @@ export default function InstitutionSettings() {
   const { institution, profile } = useAuth();
 
   const [name, setName] = useState("");
+  const [motto, setMotto] = useState("");
   const [institutionType, setInstitutionType] = useState("training_provider");
   const [colors, setColors] = useState({ theme_color: "#52525B", secondary_color: "#71717A", accent_color: "#B8873B" });
   const [logoUrl, setLogoUrl] = useState(null);
@@ -77,6 +78,7 @@ export default function InstitutionSettings() {
         .from("institutions")
         .update({
           name,
+          motto,
           institution_type: institutionType,
           theme_color: colors.theme_color,
           secondary_color: colors.secondary_color,
@@ -135,9 +137,18 @@ export default function InstitutionSettings() {
         <div className="paper p-6 space-y-5">
           <h2 className="font-display font-semibold text-sm uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>Basics</h2>
 
-          <div>
+                    <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Institution Name</label>
             <input type="text" value={name} onChange={(e) => setName(e.target.value)} required className={inputClass} style={{ borderColor: "var(--border-soft)" }} />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Motto / Tagline</label>
+            <input
+              type="text" value={motto} onChange={(e) => setMotto(e.target.value)}
+              placeholder="e.g. Excellence in every learner" className={inputClass} style={{ borderColor: "var(--border-soft)" }}
+            />
+            <p className="text-xs text-gray-500 mt-1">Shown on the homepage for your own signed-in learners and staff.</p>
           </div>
 
           <div>

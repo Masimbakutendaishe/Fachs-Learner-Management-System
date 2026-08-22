@@ -6,8 +6,10 @@ import ChatModal from "../components/ChatModal";
 import CountUp from "react-countup";
 import VisibilitySensor from "react-visibility-sensor";
 import { createClient } from "../lib/supabase/client";
+import { useAuth } from "./context/AuthContext";
 
 export default function Home() {
+  const { institution } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [mode, setMode] = useState("signin");
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -73,12 +75,11 @@ export default function Home() {
         <p className="text-xs font-mono tracking-wide text-[var(--text-muted)] mb-4">
           MULTI-INSTITUTION LEARNING PLATFORM
         </p>
-        <h1 className="font-display text-4xl md:text-5xl font-semibold mb-4" style={{ color: "var(--text)" }}>
-          Learning, built for how your institution actually runs
+                <h1 className="font-display text-4xl md:text-5xl font-semibold mb-4" style={{ color: "var(--text)" }}>
+          {institution?.name ? `Welcome to ${institution.name}` : "Learning, built for how your institution actually runs"}
         </h1>
         <p className="text-lg text-[var(--text-muted)] mb-8">
-          Qualifications, live sessions, assessments, and progress, all in one place.
-          Built for training providers and schools alike.
+          {institution?.motto || "Qualifications, live sessions, assessments, and progress, all in one place. Built for training providers and schools alike."}
         </p>
 
         {!sessionUser && (

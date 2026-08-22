@@ -3,8 +3,6 @@
   "/_document": "pages/_document.js",
   "/_error": "pages/_error.js",
   "/superadmin": "pages/superadmin.js",
-  "/": "pages/index.js",
-  "/profile": "pages/profile.js",
   "/superadmin/users": "pages/superadmin/users.js",
-  "/api/superadmin/list-users": "pages/api/superadmin/list-users.js"
+  "/": "pages/index.js"
 }

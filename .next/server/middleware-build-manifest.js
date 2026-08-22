@@ -25,11 +25,6 @@ self.__BUILD_MANIFEST = {
       "static/chunks/main.js",
       "static/chunks/pages/_error.js"
     ],
-    "/superadmin": [
-      "static/chunks/webpack.js",
-      "static/chunks/main.js",
-      "static/chunks/pages/superadmin.js"
-    ],
     "/superadmin/users": [
       "static/chunks/webpack.js",
       "static/chunks/main.js",

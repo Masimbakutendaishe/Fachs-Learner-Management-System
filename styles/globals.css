@@ -21,18 +21,31 @@
   position: absolute;
   inset: 0;
   overflow: hidden;
-  background: linear-gradient(135deg, #71717A 0%, #4B5563 45%, #63636B 55%, #71717A 100%);
+  background: linear-gradient(135deg, var(--brand-secondary) 0%, var(--brand-color) 45%, var(--brand-secondary) 55%, var(--brand-color) 100%);
   background-size: 220% 220%;
   animation: silver-shift 7s ease-in-out infinite;
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.15);
 }
 
 .btn-silver {
   position: relative;
   overflow: hidden;
-  background: linear-gradient(135deg, #71717A 0%, #52525B 45%, #63636B 55%, #71717A 100%);
+  background: linear-gradient(135deg, var(--brand-secondary) 0%, var(--brand-color) 45%, var(--brand-secondary) 55%, var(--brand-color) 100%);
   background-size: 220% 220%;
   animation: silver-shift 7s ease-in-out infinite;
   color: white;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  transition: box-shadow 0.2s ease, transform 0.15s ease;
+}
+
+.btn-silver:hover {
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+.btn-silver:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 .btn-silver::after {
