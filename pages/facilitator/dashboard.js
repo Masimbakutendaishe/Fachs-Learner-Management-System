@@ -212,6 +212,8 @@ function AddQualificationModal({ facilitatorId, institutionId, onClose, onCreate
   const [price, setPrice] = useState("");
   const [description, setDescription] = useState("");
   const [imageFile, setImageFile] = useState(null);
+  const [qualificationType, setQualificationType] = useState("full");
+  const [curriculumFile, setCurriculumFile] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
   const inputClass =
@@ -248,6 +250,15 @@ function AddQualificationModal({ facilitatorId, institutionId, onClose, onCreate
           imageUrl = publicUrlData.publicUrl;
         }
 
+                let curriculumUrl = null;
+        if (curriculumFile) {
+          const path = `curriculum/${Date.now()}_${curriculumFile.name}`;
+          const { error: curErr } = await supabase.storage.from("programme-content").upload(path, curriculumFile);
+          if (curErr) throw curErr;
+          const { data: curUrlData } = supabase.storage.from("programme-content").getPublicUrl(path);
+          curriculumUrl = curUrlData.publicUrl;
+        }
+
         const { data: newProg, error: insertErr } = await supabase
           .from("programmes")
           .insert([{
@@ -257,6 +268,8 @@ function AddQualificationModal({ facilitatorId, institutionId, onClose, onCreate
             price: Number(price) || 0,
             description,
             image_url: imageUrl,
+            qualification_type: qualificationType,
+            curriculum_document_url: curriculumUrl,
             facilitator_id: facilitatorId,
             institution_id: institutionId,
           }])
@@ -265,6 +278,18 @@ function AddQualificationModal({ facilitatorId, institutionId, onClose, onCreate
 
         if (insertErr) throw insertErr;
         programme = newProg;
+
+        await supabase.from("qualification_modules").insert(
+          ["knowledge", "practical", "workplace"].map((module_type) => ({
+            programme_id: programme.id,
+            institution_id: institutionId,
+            module_type,
+          }))
+        );
+
+        if (qualificationType === "skills_programme") {
+          await supabase.from("qualification_fisa").insert({ programme_id: programme.id, institution_id: institutionId });
+        }
       }
 
       onCreated(programme);
@@ -320,6 +345,24 @@ function AddQualificationModal({ facilitatorId, institutionId, onClose, onCreate
               onChange={(e) => setDescription(e.target.value)} rows={3}
               className={inputClass} style={{ borderColor: "var(--border-soft)", color: "var(--text)" }}
             />
+                       <div>
+              <label className="block text-xs text-[var(--text-muted)] mb-1">Qualification Type</label>
+              <select value={qualificationType} onChange={(e) => setQualificationType(e.target.value)} className={inputClass} style={{ borderColor: "var(--border-soft)", color: "var(--text)" }}>
+                <option value="full">Full Qualification</option>
+                <option value="part">Part Qualification</option>
+                <option value="skills_programme">Skills Programme</option>
+                <option value="masterclass">Masterclass</option>
+              </select>
+              <p className="text-xs text-gray-500 mt-1">
+                {qualificationType === "skills_programme"
+                  ? "Skills Programmes get a Final Integrated Summative Assessment (FISA)."
+                  : "Full and Part Qualifications are checked against an ISA (Internal Assessment Specification)."}
+              </p>
+            </div>
+            <div>
+              <label className="block text-xs text-[var(--text-muted)] mb-1">Curriculum Document</label>
+              <input type="file" onChange={(e) => setCurriculumFile(e.target.files[0])} className="text-sm text-gray-600" />
+            </div>
             <div>
               <label className="block text-xs text-[var(--text-muted)] mb-1">Qualification Image (optional)</label>
               <input

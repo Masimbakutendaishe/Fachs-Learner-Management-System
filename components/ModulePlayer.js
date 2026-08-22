@@ -148,11 +148,35 @@ const SubmissionStatus = ({ submission }) => {
   );
 };
 
+function normalizeQuestion(q) {
+  if (typeof q === "string") return { text: q, type: "free", marks: null, media: null, options: [] };
+  return { type: "free", marks: null, media: null, options: [], ...q };
+}
+
+const QuestionMedia = ({ media }) => {
+  const [showVideo, setShowVideo] = useState(false);
+  if (!media?.url) return null;
+  if (media.type === "image") return <img src={media.url} alt="" className="rounded-lg mb-3 max-h-56 object-contain" />;
+  if (media.type === "voice") return <audio controls src={media.url} className="w-full mb-3" />;
+  if (media.type === "youtube") {
+    return (
+      <>
+        <button type="button" onClick={() => setShowVideo(true)} className="text-xs font-medium mb-3 inline-block" style={{ color: "var(--brand-color)" }}>
+          Watch attached video
+        </button>
+        {showVideo && <YoutubeModal video={{ url: media.url }} onClose={() => setShowVideo(false)} />}
+      </>
+    );
+  }
+  return null;
+};
+
 const PracticalEvidenceUpload = ({ title, questions, onComplete, enrollment, unitWeek, existingSubmission, readOnly }) => {
   const supabase = createClient();
   const [step, setStep] = useState(0);
   const [uploads, setUploads] = useState({});
   const [submitting, setSubmitting] = useState(false);
+  const normQuestions = (questions || []).map(normalizeQuestion);
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -200,21 +224,27 @@ const PracticalEvidenceUpload = ({ title, questions, onComplete, enrollment, uni
         <p className="text-sm text-gray-400">Your facilitator hasn't added questions for this activity yet.</p>
       ) : (
         <>
-          <p className="text-xs font-mono text-[var(--seal-gold)] mb-4">Upload your evidence for each question below</p>
+                    <p className="text-xs font-mono text-[var(--seal-gold)] mb-4">Upload your evidence for each question below</p>
           <div className="p-4 rounded-xl" style={{ background: "var(--paper-muted)" }}>
-            <p className="mb-3 text-sm font-medium" style={{ color: "var(--text)" }}>{questions[step]}</p>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-sm font-medium" style={{ color: "var(--text)" }}>{normQuestions[step].text}</p>
+              {normQuestions[step].marks != null && (
+                <span className="text-xs font-mono px-2 py-0.5 rounded-full flex-shrink-0" style={{ background: "var(--seal-gold-soft)", color: "var(--seal-gold)" }}>{normQuestions[step].marks} marks</span>
+              )}
+            </div>
+            <QuestionMedia media={normQuestions[step].media} />
             <input type="file" onChange={handleFileChange} className="mb-3 text-sm text-gray-500" />
             {uploads[step] && <p className="text-emerald-600 text-xs mb-4">Selected: {uploads[step].name}</p>}
             <div className="flex justify-between">
               <button onClick={() => setStep((s) => s - 1)} disabled={step === 0} className="px-4 py-2 rounded-lg text-sm bg-gray-100 text-gray-600 disabled:opacity-50">Previous</button>
-              {step < questions.length - 1 ? (
+              {step < normQuestions.length - 1 ? (
                 <button onClick={() => setStep((s) => s + 1)} className="px-4 py-2 rounded-lg text-sm text-white font-medium" style={{ background: "var(--brand-color)" }}>Next</button>
               ) : (
                 <button onClick={handleSubmitEvidence} disabled={submitting} className="px-4 py-2 rounded-lg text-sm text-white font-medium bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50">{submitting ? "Submitting..." : "Submit Evidence"}</button>
               )}
             </div>
           </div>
-          <p className="text-xs text-gray-400 mt-3 text-center font-mono">Question {step + 1} of {questions.length}</p>
+          <p className="text-xs text-gray-400 mt-3 text-center font-mono">Question {step + 1} of {normQuestions.length}</p>
         </>
       )}
     </div>
@@ -226,6 +256,7 @@ const LearningResource = ({ title, url, questions, onComplete, activityType, enr
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState({});
   const [submitting, setSubmitting] = useState(false);
+  const normQuestions = (questions || []).map(normalizeQuestion);
 
   const handleSubmitAnswers = async () => {
     setSubmitting(true);
@@ -259,7 +290,7 @@ const LearningResource = ({ title, url, questions, onComplete, activityType, enr
       <div className="mt-4">
         <SubmissionStatus submission={existingSubmission} />
       </div>
-      {existingSubmission ? (
+            {existingSubmission ? (
         <div className="p-4 rounded-xl text-sm text-gray-600 space-y-2" style={{ background: "var(--paper-muted)" }}>
           {existingSubmission.answers && Object.entries(existingSubmission.answers).map(([q, a]) => (
             <p key={q}><span className="font-medium text-gray-800">Q{Number(q) + 1}:</span> {a}</p>
@@ -267,17 +298,48 @@ const LearningResource = ({ title, url, questions, onComplete, activityType, enr
         </div>
       ) : readOnly ? (
         <p className="text-sm text-gray-400">This week has passed and no submission was made.</p>
-      ) : questions?.length === 0 ? (
+      ) : normQuestions.length === 0 ? (
         <p className="text-sm text-gray-400">Your facilitator hasn't added questions for this activity yet.</p>
       ) : (
         <>
           <p className="text-xs font-mono text-[var(--seal-gold)] mb-4">Read the material fully before answering below</p>
           <div className="p-4 rounded-xl" style={{ background: "var(--paper-muted)" }}>
-            <p className="mb-3 text-sm font-medium" style={{ color: "var(--text)" }}>{questions[step]}</p>
-            <textarea className="w-full p-3 rounded-lg border text-sm mb-4" style={{ borderColor: "var(--border-soft)" }} value={answers[step] || ""} onChange={(e) => setAnswers((prev) => ({ ...prev, [step]: e.target.value }))} placeholder="Type your answer here..." rows={4} />
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-sm font-medium" style={{ color: "var(--text)" }}>{normQuestions[step].text}</p>
+              {normQuestions[step].marks != null && (
+                <span className="text-xs font-mono px-2 py-0.5 rounded-full flex-shrink-0" style={{ background: "var(--seal-gold-soft)", color: "var(--seal-gold)" }}>{normQuestions[step].marks} marks</span>
+              )}
+            </div>
+            <QuestionMedia media={normQuestions[step].media} />
+
+            {normQuestions[step].type === "mcq" ? (
+              <div className="space-y-2 mb-4">
+                {(normQuestions[step].options || []).map((opt, i) => (
+                  <label key={i} className="flex items-center gap-2 p-2.5 rounded-lg text-sm cursor-pointer" style={{ background: answers[step] === opt ? "var(--seal-gold-soft)" : "white", border: "1px solid var(--border-soft)" }}>
+                    <input type="radio" name={`q-${step}`} checked={answers[step] === opt} onChange={() => setAnswers((prev) => ({ ...prev, [step]: opt }))} />
+                    {opt}
+                  </label>
+                ))}
+              </div>
+            ) : normQuestions[step].type === "yesno" ? (
+              <div className="flex gap-3 mb-4">
+                {["Yes", "No"].map((opt) => (
+                  <button
+                    key={opt} type="button" onClick={() => setAnswers((prev) => ({ ...prev, [step]: opt }))}
+                    className="flex-1 py-2.5 rounded-lg text-sm font-medium"
+                    style={answers[step] === opt ? { background: "var(--brand-color)", color: "white" } : { background: "white", border: "1px solid var(--border-soft)", color: "var(--text)" }}
+                  >
+                    {opt}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <textarea className="w-full p-3 rounded-lg border text-sm mb-4" style={{ borderColor: "var(--border-soft)" }} value={answers[step] || ""} onChange={(e) => setAnswers((prev) => ({ ...prev, [step]: e.target.value }))} placeholder="Type your answer here..." rows={4} />
+            )}
+
             <div className="flex justify-between">
               <button onClick={() => setStep((s) => s - 1)} disabled={step === 0} className="px-4 py-2 rounded-lg text-sm bg-gray-100 text-gray-600 disabled:opacity-50">Previous</button>
-              {step < questions.length - 1 ? (
+              {step < normQuestions.length - 1 ? (
                 <button onClick={() => setStep((s) => s + 1)} className="px-4 py-2 rounded-lg text-sm text-white font-medium" style={{ background: "var(--brand-color)" }}>Next</button>
               ) : (
                 <button onClick={handleSubmitAnswers} disabled={submitting} className="px-4 py-2 rounded-lg text-sm text-white font-medium bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50">{submitting ? "Submitting..." : "Submit"}</button>
