@@ -13,7 +13,7 @@ function normalizeProgramme(q) {
     institution_id: q.institution_id,
     title: q.name,
     nqf: `NQF Level ${q.nqf_level}`,
-    image: q.image || "/dsk.jpg",
+    image: q.image_url || "/dsk.jpg",
     description: q.description || "",
     credits: q.credits_total || 0,
     duration: q.duration || "TBA",

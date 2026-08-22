@@ -182,42 +182,25 @@ export default function FacilitatorCoursePage() {
       <p className="text-xs font-mono text-[var(--text-muted)] mb-1">FACILITATOR</p>
       <h1 className="font-display text-3xl font-semibold mb-6" style={{ color: "var(--text)" }}>{programme.name}</h1>
 
-      <div className="flex gap-2 mb-6 flex-wrap">
-        <button
-          onClick={() => setTab("content")}
-          className="px-4 py-2 rounded-lg text-sm font-medium"
-          style={tab === "content" ? { background: "var(--brand-color)", color: "white" } : { background: "var(--paper)", border: "1px solid var(--border-soft)", color: "var(--text-muted)" }}
-        >
-          Weekly Content
-        </button>
-        <button
-          onClick={() => setTab("submissions")}
-          className="px-4 py-2 rounded-lg text-sm font-medium"
-          style={tab === "submissions" ? { background: "var(--brand-color)", color: "white" } : { background: "var(--paper)", border: "1px solid var(--border-soft)", color: "var(--text-muted)" }}
-        >
-          Submissions and Grading
-        </button>
-        <button
-          onClick={() => setTab("daily_attendance")}
-          className="px-4 py-2 rounded-lg text-sm font-medium"
-          style={tab === "attendance" ? { background: "var(--brand-color)", color: "white" } : { background: "var(--paper)", border: "1px solid var(--border-soft)", color: "var(--text-muted)" }}
-        >
-          Attendance
-        </button>
-        <button
-          onClick={() => setTab("messages")}
-          className="px-4 py-2 rounded-lg text-sm font-medium"
-          style={tab === "messages" ? { background: "var(--brand-color)", color: "white" } : { background: "var(--paper)", border: "1px solid var(--border-soft)", color: "var(--text-muted)" }}
-        >
-          Messages
-        </button>
-        <button
-          onClick={() => setTab("whiteboard")}
-          className="px-4 py-2 rounded-lg text-sm font-medium"
-          style={tab === "whiteboard" ? { background: "var(--brand-color)", color: "white" } : { background: "var(--paper)", border: "1px solid var(--border-soft)", color: "var(--text-muted)" }}
-        >
-          Whiteboard
-        </button>
+            <div className="flex justify-center mb-6">
+        <div className="paper p-1.5 flex gap-1 flex-wrap justify-center rounded-2xl">
+          {[
+            { key: "content", label: "Weekly Content" },
+            { key: "submissions", label: "Submissions and Grading" },
+            { key: "daily_attendance", label: "Attendance" },
+            { key: "messages", label: "Messages" },
+            { key: "whiteboard", label: "Whiteboard" },
+          ].map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              className="px-4 py-2 rounded-xl text-sm font-medium transition-all"
+              style={tab === t.key ? { background: "var(--brand-color)", color: "white" } : { color: "var(--text-muted)" }}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {tab === "content" && (

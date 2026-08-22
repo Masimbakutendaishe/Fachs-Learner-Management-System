@@ -203,7 +203,9 @@ function AddQualificationModal({ facilitatorId, institutionId, onClose, onCreate
   const [name, setName] = useState("");
   const [nqfLevel, setNqfLevel] = useState("");
   const [credits, setCredits] = useState("");
+  const [price, setPrice] = useState("");
   const [description, setDescription] = useState("");
+  const [imageFile, setImageFile] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
   const inputClass =
@@ -227,16 +229,28 @@ function AddQualificationModal({ facilitatorId, institutionId, onClose, onCreate
 
       if (checkErr) throw checkErr;
 
-      let programme = existing;
+            let programme = existing;
 
       if (!programme) {
+        let imageUrl = null;
+        if (imageFile) {
+          const ext = imageFile.name.split(".").pop();
+          const path = `programme-images/${Date.now()}_${imageFile.name}`;
+          const { error: uploadError } = await supabase.storage.from("programme-content").upload(path, imageFile);
+          if (uploadError) throw uploadError;
+          const { data: publicUrlData } = supabase.storage.from("programme-content").getPublicUrl(path);
+          imageUrl = publicUrlData.publicUrl;
+        }
+
         const { data: newProg, error: insertErr } = await supabase
           .from("programmes")
           .insert([{
             name,
             nqf_level: Number(nqfLevel) || 1,
             credits_total: Number(credits) || 0,
+            price: Number(price) || 0,
             description,
+            image_url: imageUrl,
             facilitator_id: facilitatorId,
             institution_id: institutionId,
           }])
@@ -278,7 +292,7 @@ function AddQualificationModal({ facilitatorId, institutionId, onClose, onCreate
               onChange={(e) => setName(e.target.value)} required
               className={inputClass} style={{ borderColor: "var(--border-soft)", color: "var(--text)" }}
             />
-            <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-2 gap-3">
               <input
                 type="number" placeholder="NQF Level" value={nqfLevel}
                 onChange={(e) => setNqfLevel(e.target.value)} required
@@ -290,11 +304,23 @@ function AddQualificationModal({ facilitatorId, institutionId, onClose, onCreate
                 className={inputClass} style={{ borderColor: "var(--border-soft)", color: "var(--text)" }}
               />
             </div>
+            <input
+              type="number" step="0.01" placeholder="Price (e.g. 499.00)" value={price}
+              onChange={(e) => setPrice(e.target.value)} required
+              className={inputClass} style={{ borderColor: "var(--border-soft)", color: "var(--text)" }}
+            />
             <textarea
               placeholder="Description" value={description}
               onChange={(e) => setDescription(e.target.value)} rows={3}
               className={inputClass} style={{ borderColor: "var(--border-soft)", color: "var(--text)" }}
             />
+            <div>
+              <label className="block text-xs text-[var(--text-muted)] mb-1">Qualification Image (optional)</label>
+              <input
+                type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files[0])}
+                className="text-sm text-gray-600"
+              />
+            </div>
             <button
               type="submit" disabled={submitting}
               className="w-full py-3 mt-2 rounded-xl text-white font-medium transition-all hover:brightness-110 disabled:opacity-50"
