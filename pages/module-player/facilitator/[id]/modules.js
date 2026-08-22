@@ -74,7 +74,9 @@ export default function QualificationModulesPage() {
 
       <p className="text-xs font-mono text-[var(--text-muted)] mb-1">QUALIFICATION MODULES</p>
       <h1 className="font-display text-3xl font-semibold mb-1" style={{ color: "var(--text)" }}>{programme.name}</h1>
-      <p className="text-sm text-gray-500 mb-6 capitalize">{programme.qualification_type?.replace("_", " ")}</p>
+      <p className="text-sm text-gray-500 mb-4 capitalize">{programme.qualification_type?.replace("_", " ")}</p>
+
+      <CurriculumDocumentCard programme={programme} onUpdated={fetchAll} />
 
         <div className="flex justify-center mb-6">
         <div className="paper p-1.5 flex gap-1 rounded-2xl flex-wrap justify-center">
@@ -238,10 +240,15 @@ function ModuleEditor({ module, moduleType, programme, onSaved }) {
         <h2 className="font-display font-semibold" style={{ color: "var(--text)" }}>
           {isPractical ? "Practical Textbook (scenarios)" : "Learner Guide"}
         </h2>
-        <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3">
           <input type="file" onChange={(e) => e.target.files[0] && handleGuideUpload(e.target.files[0])} className="text-sm text-gray-500" />
           {uploading && <span className="text-xs text-[var(--seal-gold)] font-mono">Uploading...</span>}
-          {guideUrl && !uploading && <a href={guideUrl} target="_blank" rel="noopener noreferrer" className="text-xs" style={{ color: "var(--brand-color)" }}>View current file</a>}
+          {guideUrl && !uploading && (
+            <>
+              <a href={guideUrl} target="_blank" rel="noopener noreferrer" className="text-xs" style={{ color: "var(--brand-color)" }}>View current file</a>
+              <button onClick={() => setGuideUrl("")} className="text-xs text-red-500 hover:underline">Remove</button>
+            </>
+          )}
         </div>
 
         <div className="pt-3 border-t" style={{ borderColor: "var(--border-soft)" }}>
@@ -314,11 +321,67 @@ function ModuleEditor({ module, moduleType, programme, onSaved }) {
         </div>
       </div>
 
-      <button onClick={handleSave} disabled={saving} className="btn-silver w-full py-2.5 rounded-lg text-sm font-medium disabled:opacity-50">
+            <button onClick={handleSave} disabled={saving} className="btn-silver w-full py-2.5 rounded-lg text-sm font-medium disabled:opacity-50">
         {saving ? "Saving..." : "Save Module"}
       </button>
     </div>
+  );
+}
+
 const MODULE_LABELS_INLINE = MODULE_LABELS;
+
+function CurriculumDocumentCard({ programme, onUpdated }) {
+  const supabase = createClient();
+  const [uploading, setUploading] = useState(false);
+
+  const handleUpload = async (file) => {
+    setUploading(true);
+    try {
+      const path = `curriculum/${Date.now()}_${file.name}`;
+      const { error: uploadError } = await supabase.storage.from("programme-content").upload(path, file);
+      if (uploadError) throw uploadError;
+      const { data } = supabase.storage.from("programme-content").getPublicUrl(path);
+      const { error } = await supabase.from("programmes").update({ curriculum_document_url: data.publicUrl }).eq("id", programme.id);
+      if (error) throw error;
+      onUpdated();
+    } catch (err) {
+      alert("Upload failed: " + err.message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleRemove = async () => {
+    if (!confirm("Remove the curriculum document?")) return;
+    const { error } = await supabase.from("programmes").update({ curriculum_document_url: null }).eq("id", programme.id);
+    if (error) alert(error.message);
+    else onUpdated();
+  };
+
+  return (
+    <div className="paper p-5 mb-6 flex items-center justify-between flex-wrap gap-3">
+      <div>
+        <p className="text-xs font-mono text-[var(--text-muted)] mb-1">CURRICULUM DOCUMENT</p>
+        {programme.curriculum_document_url ? (
+          <a href={programme.curriculum_document_url} target="_blank" rel="noopener noreferrer" className="text-sm font-medium" style={{ color: "var(--brand-color)" }}>
+            View current document
+          </a>
+        ) : (
+          <p className="text-sm text-gray-400">Nothing uploaded yet.</p>
+        )}
+      </div>
+      <div className="flex items-center gap-2">
+        <label className="px-3 py-2 rounded-lg text-sm font-medium cursor-pointer" style={{ border: "1px solid var(--border-soft)", color: "var(--text)" }}>
+          {uploading ? "Uploading..." : programme.curriculum_document_url ? "Replace" : "Upload"}
+          <input type="file" className="hidden" disabled={uploading} onChange={(e) => e.target.files[0] && handleUpload(e.target.files[0])} />
+        </label>
+        {programme.curriculum_document_url && (
+          <button onClick={handleRemove} className="text-xs text-red-500 hover:underline">Remove</button>
+        )}
+      </div>
+    </div>
+  );
+}
 
 function IsaCriteriaEditor({ programme }) {
   const supabase = createClient();
@@ -519,10 +582,15 @@ function WorkplaceLogbookReview({ entries, module, programme, onSignOff, onGuide
     <div className="space-y-4">
       <div className="paper p-6 space-y-3">
         <h2 className="font-display font-semibold" style={{ color: "var(--text)" }}>Workplace Guide (what learners should log)</h2>
-        <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3">
           <input type="file" onChange={(e) => e.target.files[0] && handleGuideUpload(e.target.files[0])} className="text-sm text-gray-500" />
           {uploading && <span className="text-xs text-[var(--seal-gold)] font-mono">Uploading...</span>}
-          {guideUrl && !uploading && <a href={guideUrl} target="_blank" rel="noopener noreferrer" className="text-xs" style={{ color: "var(--brand-color)" }}>View current file</a>}
+          {guideUrl && !uploading && (
+            <>
+              <a href={guideUrl} target="_blank" rel="noopener noreferrer" className="text-xs" style={{ color: "var(--brand-color)" }}>View current file</a>
+              <button onClick={() => setGuideUrl("")} className="text-xs text-red-500 hover:underline">Remove</button>
+            </>
+          )}
         </div>
         <button onClick={saveGuide} disabled={saving} className="text-xs font-medium px-3 py-1.5 rounded-lg disabled:opacity-50" style={{ border: "1px solid var(--border-soft)", color: "var(--text)" }}>
           {saving ? "Saving..." : "Save Guide"}

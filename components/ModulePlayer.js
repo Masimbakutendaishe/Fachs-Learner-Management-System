@@ -493,6 +493,73 @@ const ResourcesPanel = ({ unitWeek }) => {
   );
 };
 
+const LibraryPanel = ({ enrollment }) => {
+  const supabase = createClient();
+  const [programme, setProgramme] = useState(null);
+  const [modules, setModules] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [openChapters, setOpenChapters] = useState(null);
+
+  useEffect(() => {
+    fetchAll();
+  }, []);
+
+  const fetchAll = async () => {
+    const { data: prog } = await supabase.from("programmes").select("name, curriculum_document_url, qualification_type").eq("id", enrollment.programme_id).single();
+    setProgramme(prog);
+    const { data: modulesData } = await supabase.from("qualification_modules").select("*").eq("programme_id", enrollment.programme_id);
+    setModules(modulesData || []);
+    setLoading(false);
+  };
+
+  if (loading) return <p className="text-sm font-mono text-[var(--text-muted)]">Loading...</p>;
+
+  return (
+    <div className="space-y-4">
+      <div className="paper p-6">
+        <h2 className="font-display text-xl font-semibold mb-2" style={{ color: "var(--text)" }}>Curriculum Document</h2>
+        {programme?.curriculum_document_url ? (
+          <LinkButton href={programme.curriculum_document_url}>Download Curriculum Document</LinkButton>
+        ) : (
+          <p className="text-sm text-gray-400">Not uploaded yet.</p>
+        )}
+      </div>
+
+      {modules.map((m) => (
+        <div key={m.id} className="paper p-6">
+          <h2 className="font-display text-lg font-semibold mb-2 capitalize" style={{ color: "var(--text)" }}>
+            {m.module_type} Module {m.module_type === "workplace" ? "Guide" : "Textbook"}
+          </h2>
+          {m.guide_url ? (
+            <LinkButton href={m.guide_url}>Download</LinkButton>
+          ) : (
+            <p className="text-sm text-gray-400">Not uploaded yet.</p>
+          )}
+          {m.guide_chapters?.length > 0 && (
+            <button
+              onClick={() => setOpenChapters(openChapters === m.id ? null : m.id)}
+              className="block mt-3 text-sm font-medium"
+              style={{ color: "var(--brand-color)" }}
+            >
+              {openChapters === m.id ? "Hide chapters" : `View ${m.guide_chapters.length} chapters`}
+            </button>
+          )}
+          {openChapters === m.id && (
+            <div className="mt-3 space-y-2">
+              {m.guide_chapters.map((c, i) => (
+                <details key={i} className="p-3 rounded-lg" style={{ background: "var(--paper-muted)" }}>
+                  <summary className="text-sm font-medium cursor-pointer" style={{ color: "var(--text)" }}>{i + 1}. {c.title}</summary>
+                  <p className="text-sm text-gray-600 mt-2 whitespace-pre-line">{c.content}</p>
+                </details>
+              ))}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+};
+
 const LogbookPanel = ({ enrollment }) => {
   const supabase = createClient();
   const [entries, setEntries] = useState([]);
@@ -730,7 +797,8 @@ export default function ModulePlayer({ enrollmentId }) {
     { key: "whiteboard", label: "Whiteboard", icon: <span className="font-mono text-xs">WB</span> },
     { key: "ai", label: "Ask Fachs AI", icon: <Cpu size={20} /> },
         { key: "grades", label: "My Grades", icon: <SealProgress percent={0} size={18} /> },
-    { key: "logbook", label: "Logbook", icon: <span className="font-mono text-xs">LB</span> },
+        { key: "logbook", label: "Logbook", icon: <span className="font-mono text-xs">LB</span> },
+        { key: "library", label: "Course Library", icon: <span className="font-mono text-xs">LIB</span> },
   ];
 
   useEffect(() => {
@@ -974,7 +1042,8 @@ export default function ModulePlayer({ enrollmentId }) {
 
           {currentActivity === "grades" && <GradesPanel submissions={mySubmissions} />}
                     {currentActivity === "chat" && <ChatPanel enrollment={enrollment} />}
-          {currentActivity === "logbook" && <LogbookPanel enrollment={enrollment} />}
+                    {currentActivity === "logbook" && <LogbookPanel enrollment={enrollment} />}
+          {currentActivity === "library" && <LibraryPanel enrollment={enrollment} />}
           {currentActivity === "whiteboard" && (
             <Whiteboard unitWeekId={unitWeek?.id} institutionId={enrollment.institution_id} userId={enrollment.user_id} canClear={false} />
           )}
