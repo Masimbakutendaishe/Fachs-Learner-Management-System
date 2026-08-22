@@ -822,6 +822,233 @@ const LogbookPanel = ({ enrollment }) => {
   );
 };
 
+const IsaChecklistPanel = ({ enrollment }) => {
+  const supabase = createClient();
+  const [criteria, setCriteria] = useState([]);
+  const [progress, setProgress] = useState({});
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchAll();
+  }, []);
+
+  const fetchAll = async () => {
+    const { data: criteriaData } = await supabase
+      .from("qualification_isa_criteria")
+      .select("*")
+      .eq("programme_id", enrollment.programme_id)
+      .order("sort_order");
+    setCriteria(criteriaData || []);
+
+    const { data: progressData } = await supabase
+      .from("isa_criteria_progress")
+      .select("criterion_id, met")
+      .eq("enrollment_id", enrollment.id);
+    const map = {};
+    (progressData || []).forEach((p) => { map[p.criterion_id] = p.met; });
+    setProgress(map);
+    setLoading(false);
+  };
+
+  if (loading) return <p className="text-sm font-mono text-[var(--text-muted)]">Loading...</p>;
+
+  const metCount = criteria.filter((c) => progress[c.id]).length;
+
+  return (
+    <div className="paper p-6">
+      <h2 className="font-display text-xl font-semibold mb-1" style={{ color: "var(--text)" }}>ISA Checklist</h2>
+      <p className="text-sm text-gray-500 mb-4">{metCount} of {criteria.length} criteria met so far</p>
+      {criteria.length === 0 ? (
+        <p className="text-sm text-gray-400">Your facilitator hasn't added ISA criteria yet.</p>
+      ) : (
+        <ul className="space-y-2">
+          {criteria.map((c) => (
+            <li key={c.id} className="flex items-center gap-3 p-3 rounded-lg" style={{ background: "var(--paper-muted)" }}>
+              <span
+                className="w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-bold"
+                style={progress[c.id] ? { background: "#ECFDF5", color: "#047857" } : { background: "#F3F4F6", color: "#9CA3AF" }}
+              >
+                {progress[c.id] ? "Y" : "-"}
+              </span>
+              <span className="text-sm text-gray-700">{c.criterion_text}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+};
+
+const FisaPanel = ({ enrollment }) => {
+  const supabase = createClient();
+  const [fisa, setFisa] = useState(null);
+  const [attempt, setAttempt] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [answers, setAnswers] = useState({});
+  const [step, setStep] = useState(0);
+  const [remainingSeconds, setRemainingSeconds] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    fetchAll();
+  }, []);
+
+  useEffect(() => {
+    if (attempt?.status !== "in_progress" || !fisa?.duration_minutes) return;
+    const tick = () => {
+      const elapsed = (Date.now() - new Date(attempt.started_at).getTime()) / 1000;
+      const remaining = fisa.duration_minutes * 60 - elapsed;
+      setRemainingSeconds(Math.max(0, Math.floor(remaining)));
+      if (remaining <= 0) handleSubmit(true);
+    };
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [attempt]);
+
+  const fetchAll = async () => {
+    const { data: fisaData } = await supabase.from("qualification_fisa").select("*").eq("programme_id", enrollment.programme_id).single();
+    setFisa(fisaData);
+    const { data: attemptData } = await supabase.from("fisa_attempts").select("*").eq("enrollment_id", enrollment.id).maybeSingle();
+    setAttempt(attemptData);
+    if (attemptData?.answers) setAnswers(attemptData.answers);
+    setLoading(false);
+  };
+
+  const startExam = async () => {
+    const { data, error } = await supabase.from("fisa_attempts").insert({
+      enrollment_id: enrollment.id,
+      programme_id: enrollment.programme_id,
+      institution_id: enrollment.institution_id,
+      user_id: enrollment.user_id,
+    }).select().single();
+    if (error) return alert(error.message);
+    setAttempt(data);
+  };
+
+  const handleSubmit = async (auto) => {
+    if (submitting) return;
+    setSubmitting(true);
+    const { error } = await supabase
+      .from("fisa_attempts")
+      .update({ answers, status: "submitted", submitted_at: new Date().toISOString() })
+      .eq("id", attempt.id);
+    if (error) alert(error.message);
+    else {
+      if (auto) alert("Time's up, your exam has been submitted automatically.");
+      fetchAll();
+    }
+    setSubmitting(false);
+  };
+
+  if (loading) return <p className="text-sm font-mono text-[var(--text-muted)]">Loading...</p>;
+  if (!fisa) return <div className="paper p-8 text-center text-gray-500 text-sm">No FISA has been set up for this qualification yet.</div>;
+
+  const normQuestions = (fisa.questions || []).map(normalizeQuestion);
+
+  if (!attempt) {
+    return (
+      <div className="paper p-6 text-center">
+        <h2 className="font-display text-xl font-semibold mb-2" style={{ color: "var(--text)" }}>Final Integrated Summative Assessment</h2>
+        <p className="text-sm text-gray-600 mb-1">{normQuestions.length} questions</p>
+        {fisa.duration_minutes && <p className="text-sm text-gray-600 mb-1">Time limit: {fisa.duration_minutes} minutes</p>}
+        {fisa.invigilated && <p className="text-sm text-gray-600 mb-4">This exam is invigilated.</p>}
+        <p className="text-xs text-gray-400 mb-4">Once you start, the timer begins immediately and cannot be paused.</p>
+        <button onClick={startExam} className="btn-silver px-6 py-2.5 rounded-lg text-sm font-medium">Start Exam</button>
+      </div>
+    );
+  }
+
+  if (attempt.status !== "in_progress") {
+    return (
+      <div className="paper p-6">
+        <h2 className="font-display text-xl font-semibold mb-2" style={{ color: "var(--text)" }}>Final Integrated Summative Assessment</h2>
+        <SubmissionStatus submission={{ status: attempt.status === "graded" ? "graded" : "submitted", grade: attempt.grade, feedback: attempt.feedback }} />
+      </div>
+    );
+  }
+
+  const q = normQuestions[step];
+  const mins = Math.floor((remainingSeconds || 0) / 60);
+  const secs = (remainingSeconds || 0) % 60;
+
+  return (
+    <div className="paper p-6">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="font-display text-xl font-semibold" style={{ color: "var(--text)" }}>Final Integrated Summative Assessment</h2>
+        {fisa.duration_minutes && (
+          <span className="text-sm font-mono px-3 py-1.5 rounded-full" style={{ background: remainingSeconds < 60 ? "#FEF2F2" : "var(--seal-gold-soft)", color: remainingSeconds < 60 ? "#B91C1C" : "var(--seal-gold)" }}>
+            {mins}:{secs.toString().padStart(2, "0")}
+          </span>
+        )}
+      </div>
+
+      {q && (
+        <div className="p-4 rounded-xl" style={{ background: "var(--paper-muted)" }}>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm font-medium" style={{ color: "var(--text)" }}>{q.text}</p>
+            {q.marks != null && <span className="text-xs font-mono px-2 py-0.5 rounded-full flex-shrink-0" style={{ background: "var(--seal-gold-soft)", color: "var(--seal-gold)" }}>{q.marks} marks</span>}
+          </div>
+          <QuestionMedia media={q.media} />
+
+          {q.type === "mcq" ? (
+            <div className="space-y-2 mb-4">
+              {(q.options || []).map((opt, i) => (
+                <label key={i} className="flex items-center gap-2 p-2.5 rounded-lg text-sm cursor-pointer" style={{ background: answers[step] === opt ? "var(--seal-gold-soft)" : "white", border: "1px solid var(--border-soft)" }}>
+                  <input type="radio" name={`fq-${step}`} checked={answers[step] === opt} onChange={() => setAnswers((prev) => ({ ...prev, [step]: opt }))} />
+                  {opt}
+                </label>
+              ))}
+            </div>
+          ) : q.type === "multi_select" ? (
+            <div className="space-y-2 mb-4">
+              {(q.options || []).map((opt, i) => {
+                const selected = Array.isArray(answers[step]) && answers[step].includes(opt);
+                return (
+                  <label key={i} className="flex items-center gap-2 p-2.5 rounded-lg text-sm cursor-pointer" style={{ background: selected ? "var(--seal-gold-soft)" : "white", border: "1px solid var(--border-soft)" }}>
+                    <input
+                      type="checkbox" checked={selected}
+                      onChange={() => setAnswers((prev) => {
+                        const current = Array.isArray(prev[step]) ? prev[step] : [];
+                        return { ...prev, [step]: selected ? current.filter((o) => o !== opt) : [...current, opt] };
+                      })}
+                    />
+                    {opt}
+                  </label>
+                );
+              })}
+            </div>
+          ) : q.type === "yesno" ? (
+            <div className="flex gap-3 mb-4">
+              {["Yes", "No"].map((opt) => (
+                <button key={opt} type="button" onClick={() => setAnswers((prev) => ({ ...prev, [step]: opt }))} className="flex-1 py-2.5 rounded-lg text-sm font-medium" style={answers[step] === opt ? { background: "var(--brand-color)", color: "white" } : { background: "white", border: "1px solid var(--border-soft)", color: "var(--text)" }}>
+                  {opt}
+                </button>
+              ))}
+            </div>
+          ) : q.type === "image_answer" ? (
+            <AnswerMediaUpload accept="image/*" value={answers[step]} onChange={(url) => setAnswers((prev) => ({ ...prev, [step]: url }))} label="Image" />
+          ) : q.type === "audio_answer" ? (
+            <AnswerMediaUpload accept="audio/*" value={answers[step]} onChange={(url) => setAnswers((prev) => ({ ...prev, [step]: url }))} label="Recording" />
+          ) : (
+            <textarea className="w-full p-3 rounded-lg border text-sm mb-4" style={{ borderColor: "var(--border-soft)" }} value={answers[step] || ""} onChange={(e) => setAnswers((prev) => ({ ...prev, [step]: e.target.value }))} rows={4} />
+          )}
+
+          <div className="flex justify-between">
+            <button onClick={() => setStep((s) => s - 1)} disabled={step === 0} className="px-4 py-2 rounded-lg text-sm bg-gray-100 text-gray-600 disabled:opacity-50">Previous</button>
+            {step < normQuestions.length - 1 ? (
+              <button onClick={() => setStep((s) => s + 1)} className="px-4 py-2 rounded-lg text-sm text-white font-medium" style={{ background: "var(--brand-color)" }}>Next</button>
+            ) : (
+              <button onClick={() => handleSubmit(false)} disabled={submitting} className="px-4 py-2 rounded-lg text-sm text-white font-medium bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50">{submitting ? "Submitting..." : "Submit Exam"}</button>
+            )}
+          </div>
+          <p className="text-xs text-gray-400 mt-3 text-center font-mono">Question {step + 1} of {normQuestions.length}</p>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const ChatPanel = ({ enrollment }) => {
   const supabase = createClient();
   const [messages, setMessages] = useState([]);
@@ -965,8 +1192,14 @@ export default function ModulePlayer({ enrollmentId }) {
     { key: "whiteboard", label: "Whiteboard", icon: <span className="font-mono text-xs">WB</span> },
     { key: "ai", label: "Ask Fachs AI", icon: <Cpu size={20} /> },
         { key: "grades", label: "My Grades", icon: <SealProgress percent={0} size={18} /> },
-        { key: "logbook", label: "Logbook", icon: <span className="font-mono text-xs">LB</span> },
-        { key: "library", label: "Course Library", icon: <span className="font-mono text-xs">LIB</span> },
+           { key: "logbook", label: "Logbook", icon: <span className="font-mono text-xs">LB</span> },
+    { key: "library", label: "Course Library", icon: <span className="font-mono text-xs">LIB</span> },
+    ...((enrollment?.programmes?.qualification_type === "full" || enrollment?.programmes?.qualification_type === "part")
+      ? [{ key: "isa", label: "ISA Checklist", icon: <span className="font-mono text-xs">ISA</span> }]
+      : []),
+    ...(enrollment?.programmes?.qualification_type === "skills_programme"
+      ? [{ key: "fisa", label: "Final Exam (FISA)", icon: <span className="font-mono text-xs">EXM</span> }]
+      : []),
   ];
 
   useEffect(() => {
@@ -982,7 +1215,7 @@ export default function ModulePlayer({ enrollmentId }) {
         }
         const { data: enrollmentData, error: enrollErr } = await supabase
           .from("enrollments")
-          .select("id, progress, credits_earned, credits_total, programme_id, user_id, institution_id, programmes ( id, name )")
+                    .select("id, progress, credits_earned, credits_total, programme_id, user_id, institution_id, programmes ( id, name, qualification_type )")
           .eq("id", enrollmentId)
           .single();
         if (enrollErr || !enrollmentData || enrollmentData.user_id !== userId) {
@@ -1211,7 +1444,9 @@ export default function ModulePlayer({ enrollmentId }) {
           {currentActivity === "grades" && <GradesPanel submissions={mySubmissions} />}
                     {currentActivity === "chat" && <ChatPanel enrollment={enrollment} />}
                     {currentActivity === "logbook" && <LogbookPanel enrollment={enrollment} />}
-          {currentActivity === "library" && <LibraryPanel enrollment={enrollment} />}
+                    {currentActivity === "library" && <LibraryPanel enrollment={enrollment} />}
+          {currentActivity === "isa" && <IsaChecklistPanel enrollment={enrollment} />}
+          {currentActivity === "fisa" && <FisaPanel enrollment={enrollment} />}
           {currentActivity === "whiteboard" && (
             <Whiteboard unitWeekId={unitWeek?.id} institutionId={enrollment.institution_id} userId={enrollment.user_id} canClear={false} />
           )}

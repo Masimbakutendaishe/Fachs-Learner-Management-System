@@ -514,6 +514,9 @@ function LearnerConsolidatedView({ enrolledLearners, submissions, weeks, program
   const [selectedLearner, setSelectedLearner] = useState(enrolledLearners[0]?.user_id || null);
   const [logbookEntries, setLogbookEntries] = useState([]);
   const [modules, setModules] = useState([]);
+  const [isaCriteria, setIsaCriteria] = useState([]);
+  const [isaProgress, setIsaProgress] = useState({});
+  const [selectedEnrollmentId, setSelectedEnrollmentId] = useState(null);
 
   useEffect(() => {
     if (selectedLearner) fetchExtras();
@@ -530,6 +533,34 @@ function LearnerConsolidatedView({ enrolledLearners, submissions, weeks, program
 
     const { data: modulesData } = await supabase.from("qualification_modules").select("id, module_type, questions").eq("programme_id", programme.id);
     setModules(modulesData || []);
+
+    if (programme.qualification_type === "full" || programme.qualification_type === "part") {
+      const { data: enr } = await supabase.from("enrollments").select("id").eq("user_id", selectedLearner).eq("programme_id", programme.id).maybeSingle();
+      setSelectedEnrollmentId(enr?.id || null);
+
+      const { data: criteriaData } = await supabase.from("qualification_isa_criteria").select("*").eq("programme_id", programme.id).order("sort_order");
+      setIsaCriteria(criteriaData || []);
+
+      if (enr?.id) {
+        const { data: progressData } = await supabase.from("isa_criteria_progress").select("criterion_id, met").eq("enrollment_id", enr.id);
+        const map = {};
+        (progressData || []).forEach((p) => { map[p.criterion_id] = p.met; });
+        setIsaProgress(map);
+      }
+    }
+  };
+
+  const toggleCriterion = async (criterionId, currentlyMet) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    const { error } = await supabase.from("isa_criteria_progress").upsert({
+      enrollment_id: selectedEnrollmentId,
+      criterion_id: criterionId,
+      met: !currentlyMet,
+      marked_by: user.id,
+      marked_at: new Date().toISOString(),
+    }, { onConflict: "enrollment_id,criterion_id" });
+    if (error) alert(error.message);
+    else setIsaProgress((prev) => ({ ...prev, [criterionId]: !currentlyMet }));
   };
 
    const weekSubs = submissions.filter((s) => s.user_id === selectedLearner);
@@ -592,6 +623,26 @@ function LearnerConsolidatedView({ enrolledLearners, submissions, weeks, program
             </div>
           )}
         </div>
+
+                {isaCriteria.length > 0 && (
+          <div className="paper p-5">
+            <h3 className="font-display font-semibold mb-2" style={{ color: "var(--text)" }}>ISA Criteria</h3>
+            <ul className="space-y-2">
+              {isaCriteria.map((c) => (
+                <li key={c.id} className="flex items-center justify-between gap-2 text-sm p-2 rounded-lg" style={{ background: "var(--paper-muted)" }}>
+                  <span className="text-gray-700">{c.criterion_text}</span>
+                  <button
+                    onClick={() => toggleCriterion(c.id, isaProgress[c.id])}
+                    className="text-xs font-medium px-2.5 py-1 rounded-full flex-shrink-0"
+                    style={isaProgress[c.id] ? { background: "#ECFDF5", color: "#047857" } : { background: "var(--paper)", border: "1px solid var(--border-soft)", color: "var(--text-muted)" }}
+                  >
+                    {isaProgress[c.id] ? "Met" : "Not met"}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {logbookEntries.length > 0 && (
           <div className="paper p-5">
