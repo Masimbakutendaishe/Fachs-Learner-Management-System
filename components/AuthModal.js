@@ -269,7 +269,7 @@ export default function AuthModal({ isOpen, onClose, onSelectQualification, mode
           </button>
         </form>
 
-        <p className="mt-4 text-center text-sm text-[var(--text-muted)]">
+                <p className="mt-4 text-center text-sm text-[var(--text-muted)]">
           {mode === "signup" ? (
             <>Already have an account?{" "}
               <button onClick={() => setMode("signin")} className="font-medium" style={{ color: "var(--brand-color)" }}>
@@ -284,6 +284,25 @@ export default function AuthModal({ isOpen, onClose, onSelectQualification, mode
             </>
           )}
         </p>
+        {mode === "signin" && (
+          <p className="mt-2 text-center text-sm">
+            <button
+              type="button"
+              onClick={async () => {
+                if (!email) return alert("Enter your email above first, then click this again.");
+                                const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                  redirectTo: `${window.location.origin}/reset-password`,
+                });
+                if (error) alert(error.message);
+                else alert(`Password reset email sent to ${email}.`);
+              }}
+              className="font-medium"
+              style={{ color: "var(--text-muted)" }}
+            >
+              Forgot password?
+            </button>
+          </p>
+        )}
         </div>
       </div>
     </Portal>

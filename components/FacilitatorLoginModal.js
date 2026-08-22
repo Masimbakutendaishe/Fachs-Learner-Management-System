@@ -84,13 +84,19 @@ export default function FacilitatorLoginModal({ isOpen, onClose, onSwitchToLearn
       if (profileError) {
         return alert("Error verifying your profile. Please try again.");
       }
-      if (!profile || !["facilitator", "institution_admin"].includes(profile.role)) {
+      if (!profile || !["facilitator", "institution_admin", "superadmin"].includes(profile.role)) {
         await supabase.auth.signOut();
-        return alert("Access denied. This login is for facilitators and institution admins only.");
+        return alert("Access denied. This login is for facilitators, institution admins, and platform admins only.");
       }
 
       onClose();
-      router.push(profile.role === "institution_admin" ? "/admin/institution-settings" : "/facilitator/dashboard");
+      router.push(
+        profile.role === "superadmin"
+          ? "/superadmin"
+          : profile.role === "institution_admin"
+          ? "/admin/institution-settings"
+          : "/facilitator/dashboard"
+      );
     } finally {
       setSubmitting(false);
     }
@@ -227,6 +233,26 @@ export default function FacilitatorLoginModal({ isOpen, onClose, onSwitchToLearn
             </>
           )}
         </p>
+
+                {!isSignUp && (
+          <p className="mt-2 text-center text-sm">
+            <button
+              type="button"
+              onClick={async () => {
+                if (!email) return alert("Enter your email above first, then click this again.");
+                                const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                  redirectTo: `${window.location.origin}/reset-password`,
+                });
+                if (error) alert(error.message);
+                else alert(`Password reset email sent to ${email}.`);
+              }}
+              className="font-medium"
+              style={{ color: "var(--text-muted)" }}
+            >
+              Forgot password?
+            </button>
+          </p>
+        )}
 
         <p className="mt-3 text-center text-sm text-[var(--text-muted)]">
           Are you a learner?{" "}

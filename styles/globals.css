@@ -15,8 +15,9 @@
   --seal-gold-soft: rgba(184, 135, 59, 0.12);
 }
 
-.navbar-silver {
-  position: relative;
+.navbar-silver-bg {
+  position: absolute;
+  inset: 0;
   overflow: hidden;
   background: linear-gradient(135deg, #71717A 0%, #4B5563 45%, #63636B 55%, #71717A 100%);
   background-size: 220% 220%;
@@ -51,7 +52,7 @@
   }
 }
 
-.navbar-silver::after {
+.navbar-silver-bg::after {
   content: "";
   position: absolute;
   top: 0;
@@ -75,11 +76,10 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .navbar-silver, .navbar-silver::after {
+  .navbar-silver-bg, .navbar-silver-bg::after {
     animation: none !important;
   }
 }
-
 * {
   box-sizing: border-box;
 }

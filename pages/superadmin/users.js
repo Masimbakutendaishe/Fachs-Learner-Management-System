@@ -44,7 +44,9 @@ export default function SuperadminUsers() {
   };
 
   const sendPasswordReset = async (email) => {
-    const { error } = await supabase.auth.resetPasswordForEmail(email);
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
     if (error) alert("Could not send reset email: " + error.message);
     else alert(`Password reset email sent to ${email}`);
   };
