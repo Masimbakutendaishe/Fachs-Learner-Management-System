@@ -51,8 +51,11 @@ export default function SuperadminDashboard() {
       <p className="text-[var(--text-muted)] mb-6">Every institution on the platform, plan status, and account controls.</p>
 
       <div className="flex gap-3 mb-6">
-        <Link href="/superadmin/users" className="px-4 py-2 rounded-lg text-sm font-medium" style={{ background: "var(--paper)", border: "1px solid var(--border-soft)", color: "var(--text)" }}>
+                <Link href="/superadmin/users" className="px-4 py-2 rounded-lg text-sm font-medium" style={{ background: "var(--paper)", border: "1px solid var(--border-soft)", color: "var(--text)" }}>
           Manage Users
+        </Link>
+        <Link href="/superadmin/plans" className="px-4 py-2 rounded-lg text-sm font-medium" style={{ background: "var(--paper)", border: "1px solid var(--border-soft)", color: "var(--text)" }}>
+          Manage Plans
         </Link>
       </div>
 

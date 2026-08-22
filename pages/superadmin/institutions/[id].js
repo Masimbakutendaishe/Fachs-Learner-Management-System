@@ -16,6 +16,9 @@ export default function InstitutionDetail() {
   const [loading, setLoading] = useState(true);
   const [trialDays, setTrialDays] = useState(14);
   const [busy, setBusy] = useState(false);
+  const [userRoleFilter, setUserRoleFilter] = useState("all");
+
+  const filteredUsers = userRoleFilter === "all" ? users : users.filter((u) => u.role === userRoleFilter);
 
   useEffect(() => {
     if (id) fetchAll();
@@ -80,6 +83,12 @@ export default function InstitutionDetail() {
 
   const toggleUserActive = async (userId, current) => {
     const { error } = await supabase.from("profiles").update({ is_active: !current }).eq("id", userId);
+    if (error) alert(error.message);
+    else fetchAll();
+  };
+
+  const updateUserRole = async (userId, role) => {
+    const { error } = await supabase.from("profiles").update({ role }).eq("id", userId);
     if (error) alert(error.message);
     else fetchAll();
   };
@@ -163,7 +172,24 @@ export default function InstitutionDetail() {
       </div>
 
       <div className="paper overflow-hidden overflow-x-auto">
-        <h2 className="font-display font-semibold p-5 pb-3" style={{ color: "var(--text)" }}>Users ({users.length})</h2>
+        <div className="p-5 pb-3 flex items-center justify-between flex-wrap gap-3">
+          <h2 className="font-display font-semibold" style={{ color: "var(--text)" }}>Users ({filteredUsers.length} of {users.length})</h2>
+          <div className="flex gap-2 flex-wrap">
+            {["all", "learner", "facilitator", "institution_admin"].map((r) => {
+              const count = r === "all" ? users.length : users.filter((u) => u.role === r).length;
+              return (
+                <button
+                  key={r}
+                  onClick={() => setUserRoleFilter(r)}
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium capitalize"
+                  style={userRoleFilter === r ? { background: "var(--brand-color)", color: "white" } : { background: "var(--paper-muted)", color: "var(--text-muted)" }}
+                >
+                  {r.replace("_", " ")} ({count})
+                </button>
+              );
+            })}
+          </div>
+        </div>
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left border-b" style={{ borderColor: "var(--border-soft)" }}>
@@ -174,10 +200,21 @@ export default function InstitutionDetail() {
             </tr>
           </thead>
           <tbody>
-            {users.map((u) => (
+            {filteredUsers.map((u) => (
               <tr key={u.id} className="border-b last:border-0" style={{ borderColor: "var(--border-soft)" }}>
                 <td className="px-5 py-3 font-medium" style={{ color: "var(--text)" }}>{u.first_name} {u.surname}</td>
-                <td className="px-5 py-3 text-gray-500 capitalize">{u.role?.replace("_", " ")}</td>
+                                <td className="px-5 py-3">
+                  <select
+                    value={u.role}
+                    onChange={(e) => updateUserRole(u.id, e.target.value)}
+                    className="text-xs px-2 py-1 rounded-lg border capitalize"
+                    style={{ borderColor: "var(--border-soft)" }}
+                  >
+                    {["learner", "facilitator", "institution_admin", "superadmin"].map((r) => (
+                      <option key={r} value={r}>{r.replace("_", " ")}</option>
+                    ))}
+                  </select>
+                </td>
                 <td className="px-5 py-3">
                   <span className="text-xs font-medium px-2.5 py-1 rounded-full" style={u.is_active ? { background: "#ECFDF5", color: "#047857" } : { background: "#FEF2F2", color: "#B91C1C" }}>
                     {u.is_active ? "Active" : "Deactivated"}

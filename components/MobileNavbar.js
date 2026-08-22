@@ -71,6 +71,8 @@ export default function MobileNavbar() {
           { name: "Home", href: "/" },
           { name: "Institution Settings", href: "/admin/institution-settings" },
         ]
+      : profile?.role === "superadmin"
+      ? [{ name: "Institutions", href: "/superadmin" }]
       : [
           { name: "Home", href: "/" },
           { name: "Qualifications", href: "/qualifications" },
@@ -99,6 +101,7 @@ export default function MobileNavbar() {
           <>
             <Link
               href={
+                profile?.role === "superadmin" ? "/superadmin" :
                 profile?.role === "facilitator" ? "/facilitator/dashboard" :
                 profile?.role === "institution_admin" ? "/admin/institution-settings" :
                 "/dashboard"
@@ -194,7 +197,7 @@ export default function MobileNavbar() {
                   My Progress &amp; Marks
                 </Link>
               )}
-              {profile?.role === "institution_admin" && (
+                           {profile?.role === "institution_admin" && (
                 <>
                   <Link href="/admin/institution-settings" className="block px-4 py-2.5 text-sm text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-black/5 transition-colors">
                     Institution Settings
@@ -204,6 +207,16 @@ export default function MobileNavbar() {
                   </Link>
                   <Link href="/admin/fees" className="block px-4 py-2.5 text-sm text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-black/5 transition-colors">
                     Fees &amp; Invoices
+                  </Link>
+                </>
+              )}
+              {profile?.role === "superadmin" && (
+                <>
+                  <Link href="/superadmin" className="block px-4 py-2.5 text-sm text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-black/5 transition-colors">
+                    Institutions
+                  </Link>
+                  <Link href="/superadmin/users" className="block px-4 py-2.5 text-sm text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-black/5 transition-colors">
+                    Users
                   </Link>
                 </>
               )}
@@ -242,6 +255,7 @@ export default function MobileNavbar() {
             <>
               <Link
                 href={
+                  profile?.role === "superadmin" ? "/superadmin" :
                   profile?.role === "facilitator" ? "/facilitator/dashboard" :
                   profile?.role === "institution_admin" ? "/admin/institution-settings" :
                   "/dashboard"

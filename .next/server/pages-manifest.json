@@ -2,9 +2,10 @@
   "/_app": "pages/_app.js",
   "/_error": "pages/_error.js",
   "/_document": "pages/_document.js",
-  "/reset-password": "pages/reset-password.js",
+  "/superadmin": "pages/superadmin.js",
   "/superadmin/institutions/[id]": "pages/superadmin/institutions/[id].js",
-  "/profile": "pages/profile.js",
-  "/": "pages/index.js",
-  "/dashboard": "pages/dashboard.js"
+  "/superadmin/users": "pages/superadmin/users.js",
+  "/reset-password": "pages/reset-password.js",
+  "/superadmin/plans": "pages/superadmin/plans.js",
+  "/api/superadmin/list-users": "pages/api/superadmin/list-users.js"
 }

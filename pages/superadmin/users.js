@@ -51,14 +51,17 @@ export default function SuperadminUsers() {
     else alert(`Password reset email sent to ${email}`);
   };
 
+  const [roleFilter, setRoleFilter] = useState("all");
+
   const filtered = users.filter((u) => {
     const q = search.toLowerCase();
-    return (
+    const matchesSearch =
       u.email?.toLowerCase().includes(q) ||
       u.first_name?.toLowerCase().includes(q) ||
       u.surname?.toLowerCase().includes(q) ||
-      u.institution?.toLowerCase().includes(q)
-    );
+      u.institution?.toLowerCase().includes(q);
+    const matchesRole = roleFilter === "all" || u.role === roleFilter;
+    return matchesSearch && matchesRole;
   });
 
   return (
@@ -68,14 +71,25 @@ export default function SuperadminUsers() {
       <p className="text-[var(--text-muted)] mb-6">Every account across every institution.</p>
 
       <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-        <input
-          type="text"
-          placeholder="Search by name, email, or institution..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="px-4 py-2 rounded-lg border text-sm w-full max-w-sm"
-          style={{ borderColor: "var(--border-soft)" }}
-        />
+                <div className="flex items-center gap-2 flex-wrap flex-1">
+          <input
+            type="text"
+            placeholder="Search by name, email, or institution..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="px-4 py-2 rounded-lg border text-sm w-full max-w-sm"
+            style={{ borderColor: "var(--border-soft)" }}
+          />
+          <select
+            value={roleFilter}
+            onChange={(e) => setRoleFilter(e.target.value)}
+            className="px-3 py-2 rounded-lg border text-sm capitalize"
+            style={{ borderColor: "var(--border-soft)" }}
+          >
+            <option value="all">All roles</option>
+            {ROLES.map((r) => <option key={r} value={r}>{r.replace("_", " ")}</option>)}
+          </select>
+        </div>
         <Link href="/superadmin" className="text-sm font-medium" style={{ color: "var(--brand-color)" }}>
           ← Institutions
         </Link>
