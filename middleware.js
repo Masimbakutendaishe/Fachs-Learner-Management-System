@@ -58,9 +58,9 @@ export async function middleware(request) {
   }
 
   if (isProtected && user) {
-    const { data: profile } = await supabase
+        const { data: profile } = await supabase
       .from("profiles")
-      .select("role, is_active, institutions(status)")
+      .select("role, is_active, institutions(status, trial_ends_at)")
       .eq("id", user.id)
       .single();
 
@@ -68,7 +68,10 @@ export async function middleware(request) {
       return NextResponse.redirect(new URL("/account-suspended", request.url));
     }
 
-    if (profile?.institutions?.status === "suspended" && profile.role !== "superadmin") {
+    const inst = profile?.institutions;
+    const trialExpired = inst?.status === "trial" && inst?.trial_ends_at && new Date(inst.trial_ends_at) < new Date();
+
+    if ((inst?.status === "suspended" || trialExpired) && profile.role !== "superadmin") {
       return NextResponse.redirect(new URL("/account-suspended", request.url));
     }
 

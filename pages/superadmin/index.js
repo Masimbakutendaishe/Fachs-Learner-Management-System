@@ -77,7 +77,11 @@ export default function SuperadminDashboard() {
                 const sub = inst.subscriptions?.[0];
                 return (
                   <tr key={inst.id} className="border-b last:border-0" style={{ borderColor: "var(--border-soft)" }}>
-                    <td className="px-4 py-3 font-medium" style={{ color: "var(--text)" }}>{inst.name}</td>
+                                        <td className="px-4 py-3 font-medium">
+                      <Link href={`/superadmin/institutions/${inst.id}`} style={{ color: "var(--text)" }} className="hover:underline">
+                        {inst.name}
+                      </Link>
+                    </td>
                     <td className="px-4 py-3 text-gray-500 capitalize">{inst.institution_type?.replace("_", " ")}</td>
                     <td className="px-4 py-3 text-gray-500 font-mono">{inst.userCount}</td>
                     <td className="px-4 py-3 text-gray-500">{sub?.plans?.name || "No plan"}</td>
