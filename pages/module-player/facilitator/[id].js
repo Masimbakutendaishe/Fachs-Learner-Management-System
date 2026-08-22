@@ -198,7 +198,7 @@ export default function FacilitatorCoursePage() {
           Submissions and Grading
         </button>
         <button
-          onClick={() => setTab("attendance")}
+          onClick={() => setTab("daily_attendance")}
           className="px-4 py-2 rounded-lg text-sm font-medium"
           style={tab === "attendance" ? { background: "var(--brand-color)", color: "white" } : { background: "var(--paper)", border: "1px solid var(--border-soft)", color: "var(--text-muted)" }}
         >
@@ -635,7 +635,7 @@ function WeekModal({ week, onClose, onSaved }) {
     knowledge_module_url: week.knowledge_module_url || "",
     summative_assessment_url: week.summative_assessment_url || "",
   });
-    const [uploading, setUploading] = useState(null);
+  const [uploading, setUploading] = useState(null);
   const [saving, setSaving] = useState(false);
   const [schedulingMeeting, setSchedulingMeeting] = useState(false);
   const [questions, setQuestions] = useState(week.activity_questions || { workbook: [], knowledge: [], summative: [], practical: [] });
@@ -648,6 +648,18 @@ function WeekModal({ week, onClose, onSaved }) {
   const [newYoutube, setNewYoutube] = useState({ title: "", url: "" });
   const [readingLinks, setReadingLinks] = useState(week.reading_links || []);
   const [newReading, setNewReading] = useState({ title: "", url: "", viewMode: "modal" });
+  const [generatingFor, setGeneratingFor] = useState(null);
+  const [step, setStep] = useState(0);
+
+  const STEPS = [
+    { key: "basics", label: "Basics" },
+    { key: "session", label: "Live Session" },
+    { key: "intro", label: "Intro & Links" },
+    { key: "materials", label: "Materials" },
+    { key: "chapters", label: "Guide Chapters" },
+    { key: "resources", label: "Resources" },
+    { key: "questions", label: "Questions" },
+  ];
 
   const handleFieldChange = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
 
@@ -676,8 +688,6 @@ function WeekModal({ week, onClose, onSaved }) {
       setSchedulingMeeting(false);
     }
   };
-
-    const [generatingFor, setGeneratingFor] = useState(null);
 
   const extractChapters = async () => {
     if (!form.learner_guide_url) return alert("Upload the Learner Guide first.");
@@ -775,11 +785,10 @@ function WeekModal({ week, onClose, onSaved }) {
     }
   };
 
-  const handleSave = async (e) => {
-    e.preventDefault();
+  const handleSave = async () => {
     setSaving(true);
     try {
-            const payload = {
+      const payload = {
         ...form,
         session_datetime: form.session_datetime ? new Date(form.session_datetime).toISOString() : null,
         programme_id: week.programme_id,
@@ -825,259 +834,347 @@ function WeekModal({ week, onClose, onSaved }) {
 
   const inputClass = "w-full px-3 py-2 rounded-lg border text-sm";
 
+  const canGoNext = () => {
+    if (step === 0) return form.unit_standard_title.trim() && form.week_start_date && form.week_end_date;
+    return true;
+  };
+
+  const goNext = () => setStep((s) => Math.min(s + 1, STEPS.length - 1));
+  const goBack = () => setStep((s) => Math.max(s - 1, 0));
+
   return (
     <Portal>
       <div onClick={onClose} className="fixed inset-0 bg-black/40 backdrop-blur-sm z-30" />
       <div className="fixed inset-0 z-40 flex items-center justify-center p-4">
-        <div className="relative w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-2xl shadow-2xl p-8" style={{ background: "var(--paper)" }}>
-          <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-700">X</button>
+        <div className="relative w-full max-w-xl max-h-[90vh] rounded-2xl shadow-2xl flex flex-col" style={{ background: "var(--paper)" }}>
+          <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 z-10">X</button>
 
-          <p className="text-xs font-mono text-[var(--text-muted)] mb-1">{readOnly ? "PAST WEEK" : week.id ? "EDIT WEEK" : "NEW WEEK"}</p>
-          <h2 className="font-display text-xl font-semibold mb-5" style={{ color: "var(--text)" }}>
-            {readOnly ? "Week Content (locked)" : week.id ? "Edit Weekly Content" : "Add Weekly Content"}
-          </h2>
+          <div className="p-8 pb-4 flex-shrink-0">
+            <p className="text-xs font-mono text-[var(--text-muted)] mb-1">{readOnly ? "PAST WEEK" : week.id ? "EDIT WEEK" : "NEW WEEK"}</p>
+            <h2 className="font-display text-xl font-semibold mb-4" style={{ color: "var(--text)" }}>
+              {readOnly ? "Week Content (locked)" : week.id ? "Edit Weekly Content" : "Add Weekly Content"}
+            </h2>
 
-          {readOnly && (
-            <div className="mb-4 p-3 rounded-lg text-xs" style={{ background: "var(--paper-muted)", color: "var(--text-muted)" }}>
-              This week has already passed. Deadlines and learner submissions may already be tied to it, so it's locked for editing. You can still view everything that was published.
-            </div>
-          )}
-
-          <form onSubmit={handleSave} className="space-y-3">
-            <input
-              type="text" placeholder="Week title (e.g. Week 3: Budgeting Basics)"
-              value={form.unit_standard_title} onChange={(e) => handleFieldChange("unit_standard_title", e.target.value)}
-              required disabled={readOnly} className={inputClass} style={{ borderColor: "var(--border-soft)" }}
-            />
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs text-[var(--text-muted)] mb-1">Start date</label>
-                <input type="date" value={form.week_start_date} onChange={(e) => handleFieldChange("week_start_date", e.target.value)} required disabled={readOnly} className={inputClass} style={{ borderColor: "var(--border-soft)" }} />
-              </div>
-              <div>
-                <label className="block text-xs text-[var(--text-muted)] mb-1">End date</label>
-                <input type="date" value={form.week_end_date} onChange={(e) => handleFieldChange("week_end_date", e.target.value)} required disabled={readOnly} className={inputClass} style={{ borderColor: "var(--border-soft)" }} />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs text-[var(--text-muted)] mb-1">Live session date &amp; time</label>
-              <input
-                type="datetime-local" value={form.session_datetime}
-                onChange={(e) => handleFieldChange("session_datetime", e.target.value)}
-                disabled={readOnly} className={inputClass} style={{ borderColor: "var(--border-soft)" }}
-              />
-              {!readOnly && (
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {STEPS.map((s, i) => (
                 <button
+                  key={s.key}
                   type="button"
-                  disabled={!form.session_datetime || schedulingMeeting}
-                  onClick={handleScheduleTeamsMeeting}
-                  className="mt-2 px-3 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
-                  style={{ border: "1px solid var(--border-soft)", color: "var(--text)" }}
+                  onClick={() => setStep(i)}
+                  className="px-2.5 py-1 rounded-full text-xs font-medium transition-colors"
+                  style={
+                    i === step
+                      ? { background: "var(--brand-color)", color: "white" }
+                      : i < step
+                      ? { background: "var(--seal-gold-soft)", color: "var(--seal-gold)" }
+                      : { background: "var(--paper-muted)", color: "var(--text-muted)" }
+                  }
                 >
-                  {schedulingMeeting ? "Scheduling..." : "Schedule Teams Meeting"}
+                  {i + 1}. {s.label}
                 </button>
-              )}
-              {form.teams_session_link && (
-                <p className="text-xs mt-1" style={{ color: "var(--seal-gold)" }}>Meeting link ready</p>
-              )}
+              ))}
             </div>
 
-            {FIELDS.map((f) => (
-              <div key={f.key}>
-                <label className="block text-xs text-[var(--text-muted)] mb-1">{f.label}</label>
-                {f.type === "textarea" ? (
-                  <textarea value={form[f.key]} onChange={(e) => handleFieldChange(f.key, e.target.value)} rows={3} disabled={readOnly} className={inputClass} style={{ borderColor: "var(--border-soft)" }} />
-                ) : f.type === "url" ? (
-                  <input type="url" value={form[f.key]} onChange={(e) => handleFieldChange(f.key, e.target.value)} disabled={readOnly} className={inputClass} style={{ borderColor: "var(--border-soft)" }} placeholder="https://..." />
-                ) : readOnly ? (
-                  form[f.key] ? (
-                    <a href={form[f.key]} target="_blank" rel="noopener noreferrer" className="text-xs" style={{ color: "var(--brand-color)" }}>View file</a>
-                  ) : (
-                    <span className="text-xs text-gray-400">Nothing uploaded</span>
-                  )
-                ) : (
-                  <div className="flex items-center gap-3">
-                    <input type="file" onChange={(e) => e.target.files[0] && handleFileUpload(f.key, e.target.files[0])} className="text-sm text-gray-500" />
-                    {uploading === f.key && <span className="text-xs text-[var(--seal-gold)] font-mono">Uploading...</span>}
-                    {form[f.key] && uploading !== f.key && (
-                      <a href={form[f.key]} target="_blank" rel="noopener noreferrer" className="text-xs" style={{ color: "var(--brand-color)" }}>Uploaded</a>
+            {readOnly && (
+              <div className="mt-4 p-3 rounded-lg text-xs" style={{ background: "var(--paper-muted)", color: "var(--text-muted)" }}>
+                This week has already passed. Deadlines and learner submissions may already be tied to it, so it's locked for editing. You can still view everything that was published.
+              </div>
+            )}
+          </div>
+
+          <div className="px-8 overflow-y-auto flex-1 space-y-3">
+            {step === 0 && (
+              <>
+                <input
+                  type="text" placeholder="Week title (e.g. Week 3: Budgeting Basics)"
+                  value={form.unit_standard_title} onChange={(e) => handleFieldChange("unit_standard_title", e.target.value)}
+                  disabled={readOnly} className={inputClass} style={{ borderColor: "var(--border-soft)" }}
+                />
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs text-[var(--text-muted)] mb-1">Start date</label>
+                    <input type="date" value={form.week_start_date} onChange={(e) => handleFieldChange("week_start_date", e.target.value)} disabled={readOnly} className={inputClass} style={{ borderColor: "var(--border-soft)" }} />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-[var(--text-muted)] mb-1">End date</label>
+                    <input type="date" value={form.week_end_date} onChange={(e) => handleFieldChange("week_end_date", e.target.value)} disabled={readOnly} className={inputClass} style={{ borderColor: "var(--border-soft)" }} />
+                  </div>
+                </div>
+              </>
+            )}
+
+            {step === 1 && (
+              <div>
+                <label className="block text-xs text-[var(--text-muted)] mb-1">Live session date &amp; time</label>
+                <input
+                  type="datetime-local" value={form.session_datetime}
+                  onChange={(e) => handleFieldChange("session_datetime", e.target.value)}
+                  disabled={readOnly} className={inputClass} style={{ borderColor: "var(--border-soft)" }}
+                />
+                {!readOnly && (
+                  <button
+                    type="button"
+                    disabled={!form.session_datetime || schedulingMeeting}
+                    onClick={handleScheduleTeamsMeeting}
+                    className="mt-2 px-3 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
+                    style={{ border: "1px solid var(--border-soft)", color: "var(--text)" }}
+                  >
+                    {schedulingMeeting ? "Scheduling..." : "Schedule Teams Meeting"}
+                  </button>
+                )}
+                {form.teams_session_link && (
+                  <p className="text-xs mt-1" style={{ color: "var(--seal-gold)" }}>Meeting link ready</p>
+                )}
+              </div>
+            )}
+
+            {step === 2 && (
+              <>
+                <div>
+                  <label className="block text-xs text-[var(--text-muted)] mb-1">Facilitator's Intro</label>
+                  <textarea value={form.facilitator_intro} onChange={(e) => handleFieldChange("facilitator_intro", e.target.value)} rows={4} disabled={readOnly} className={inputClass} style={{ borderColor: "var(--border-soft)" }} />
+                </div>
+                <div>
+                  <label className="block text-xs text-[var(--text-muted)] mb-1">Teams / Live Session Link</label>
+                  <input type="url" value={form.teams_session_link} onChange={(e) => handleFieldChange("teams_session_link", e.target.value)} disabled={readOnly} className={inputClass} style={{ borderColor: "var(--border-soft)" }} placeholder="https://..." />
+                </div>
+                <div>
+                  <label className="block text-xs text-[var(--text-muted)] mb-1">Video Link (optional, if separate)</label>
+                  <input type="url" value={form.video_url} onChange={(e) => handleFieldChange("video_url", e.target.value)} disabled={readOnly} className={inputClass} style={{ borderColor: "var(--border-soft)" }} placeholder="https://..." />
+                </div>
+              </>
+            )}
+
+            {step === 3 && (
+              <>
+                {[
+                  { key: "learner_guide_url", label: "Learner Guide" },
+                  { key: "learner_workbook_url", label: "Learner Workbook" },
+                  { key: "knowledge_module_url", label: "Knowledge Module" },
+                  { key: "summative_assessment_url", label: "Summative Assessment" },
+                ].map((f) => (
+                  <div key={f.key}>
+                    <label className="block text-xs text-[var(--text-muted)] mb-1">{f.label}</label>
+                    {readOnly ? (
+                      form[f.key] ? (
+                        <a href={form[f.key]} target="_blank" rel="noopener noreferrer" className="text-xs" style={{ color: "var(--brand-color)" }}>View file</a>
+                      ) : (
+                        <span className="text-xs text-gray-400">Nothing uploaded</span>
+                      )
+                    ) : (
+                      <div className="flex items-center gap-3">
+                        <input type="file" onChange={(e) => e.target.files[0] && handleFileUpload(f.key, e.target.files[0])} className="text-sm text-gray-500" />
+                        {uploading === f.key && <span className="text-xs text-[var(--seal-gold)] font-mono">Uploading...</span>}
+                        {form[f.key] && uploading !== f.key && (
+                          <a href={form[f.key]} target="_blank" rel="noopener noreferrer" className="text-xs" style={{ color: "var(--brand-color)" }}>Uploaded</a>
+                        )}
+                      </div>
                     )}
                   </div>
-                                )}
-              </div>
-            ))}
+                ))}
+              </>
+            )}
 
-            <div className="pt-2 border-t" style={{ borderColor: "var(--border-soft)" }}>
-              <div className="flex items-center justify-between mb-1">
-                <label className="block text-xs text-[var(--text-muted)]">Learner Guide Chapters</label>
-                {!readOnly && form.learner_guide_url && (
-                  <button type="button" onClick={extractChapters} disabled={extractingChapters} className="text-xs font-medium disabled:opacity-50" style={{ color: "var(--seal-gold)" }}>
-                    {extractingChapters ? "Extracting..." : "Extract from PDF"}
+            {step === 4 && (
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs text-[var(--text-muted)]">Learner Guide Chapters</label>
+                  {!readOnly && form.learner_guide_url && (
+                    <button type="button" onClick={extractChapters} disabled={extractingChapters} className="text-xs font-medium disabled:opacity-50" style={{ color: "var(--seal-gold)" }}>
+                      {extractingChapters ? "Extracting..." : "Extract from PDF"}
+                    </button>
+                  )}
+                </div>
+                {chapters.length === 0 ? (
+                  <p className="text-xs text-gray-400">No chapters yet. Upload the Learner Guide in Materials, then extract, or add manually below.</p>
+                ) : (
+                  <ul className="space-y-1 mb-2">
+                    {chapters.map((c, i) => (
+                      <li key={i} className="flex items-center justify-between gap-2 text-sm p-2 rounded-lg" style={{ background: "var(--paper-muted)" }}>
+                        <span className="text-gray-700 truncate">{i + 1}. {c.title}</span>
+                        {!readOnly && <button type="button" onClick={() => removeChapter(i)} className="text-xs text-red-500 hover:underline flex-shrink-0">Remove</button>}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {!readOnly && (
+                  <button
+                    type="button"
+                    onClick={() => setChapters((prev) => [...prev, { title: `Chapter ${prev.length + 1}`, content: "" }])}
+                    className="text-xs font-medium" style={{ color: "var(--brand-color)" }}
+                  >
+                    + Add chapter manually
                   </button>
                 )}
               </div>
-              {chapters.length === 0 ? (
-                <p className="text-xs text-gray-400">No chapters yet. Upload the Learner Guide above, then extract, or add manually below.</p>
-              ) : (
-                <ul className="space-y-1 mb-2">
-                  {chapters.map((c, i) => (
-                    <li key={i} className="flex items-center justify-between gap-2 text-sm p-2 rounded-lg" style={{ background: "var(--paper-muted)" }}>
-                      <span className="text-gray-700 truncate">{i + 1}. {c.title}</span>
-                      {!readOnly && <button type="button" onClick={() => removeChapter(i)} className="text-xs text-red-500 hover:underline flex-shrink-0">Remove</button>}
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {!readOnly && (
-                <button
-                  type="button"
-                  onClick={() => setChapters((prev) => [...prev, { title: `Chapter ${prev.length + 1}`, content: "" }])}
-                  className="text-xs font-medium" style={{ color: "var(--brand-color)" }}
-                >
-                  + Add chapter manually
-                </button>
-              )}
-            </div>
+            )}
 
-            <div className="pt-2 border-t" style={{ borderColor: "var(--border-soft)" }}>
-              <label className="block text-xs text-[var(--text-muted)] mb-1">Voice Recordings</label>
-              {voiceRecordings.length > 0 && (
-                <ul className="space-y-1 mb-2">
-                  {voiceRecordings.map((v, i) => (
-                    <li key={i} className="flex items-center justify-between gap-2 text-sm p-2 rounded-lg" style={{ background: "var(--paper-muted)" }}>
-                      <a href={v.url} target="_blank" rel="noopener noreferrer" className="truncate" style={{ color: "var(--brand-color)" }}>{v.label}</a>
-                      {!readOnly && <button type="button" onClick={() => removeVoice(i)} className="text-xs text-red-500 hover:underline flex-shrink-0">Remove</button>}
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {!readOnly && (
-                <div className="flex items-center gap-3">
-                  <input type="file" accept="audio/*" onChange={(e) => e.target.files[0] && handleVoiceUpload(e.target.files[0])} className="text-sm text-gray-500" />
-                  {uploadingVoice && <span className="text-xs text-[var(--seal-gold)] font-mono">Uploading...</span>}
-                </div>
-              )}
-            </div>
-
-            <div className="pt-2 border-t" style={{ borderColor: "var(--border-soft)" }}>
-              <label className="block text-xs text-[var(--text-muted)] mb-1">YouTube Videos</label>
-              {youtubeLinks.length > 0 && (
-                <ul className="space-y-1 mb-2">
-                  {youtubeLinks.map((y, i) => (
-                    <li key={i} className="flex items-center justify-between gap-2 text-sm p-2 rounded-lg" style={{ background: "var(--paper-muted)" }}>
-                      <span className="truncate text-gray-700">{y.title}</span>
-                      {!readOnly && <button type="button" onClick={() => removeYoutube(i)} className="text-xs text-red-500 hover:underline flex-shrink-0">Remove</button>}
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {!readOnly && (
-                <div className="flex gap-2">
-                  <input type="text" placeholder="Title" value={newYoutube.title} onChange={(e) => setNewYoutube((p) => ({ ...p, title: e.target.value }))} className={`${inputClass} flex-1`} style={{ borderColor: "var(--border-soft)" }} />
-                  <input type="url" placeholder="YouTube URL" value={newYoutube.url} onChange={(e) => setNewYoutube((p) => ({ ...p, url: e.target.value }))} className={`${inputClass} flex-1`} style={{ borderColor: "var(--border-soft)" }} />
-                  <button type="button" onClick={addYoutube} className="px-3 py-2 rounded-lg text-sm font-medium" style={{ border: "1px solid var(--border-soft)", color: "var(--text)" }}>Add</button>
-                </div>
-              )}
-            </div>
-
-            <div className="pt-2 border-t" style={{ borderColor: "var(--border-soft)" }}>
-              <label className="block text-xs text-[var(--text-muted)] mb-1">Reading Links</label>
-              {readingLinks.length > 0 && (
-                <ul className="space-y-1 mb-2">
-                  {readingLinks.map((r, i) => (
-                    <li key={i} className="flex items-center justify-between gap-2 text-sm p-2 rounded-lg" style={{ background: "var(--paper-muted)" }}>
-                      <span className="truncate text-gray-700">{r.title} <span className="text-gray-400">({r.viewMode === "modal" ? "in-site" : "new tab"})</span></span>
-                      {!readOnly && <button type="button" onClick={() => removeReading(i)} className="text-xs text-red-500 hover:underline flex-shrink-0">Remove</button>}
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {!readOnly && (
-                <div className="space-y-2">
-                  <div className="flex gap-2">
-                    <input type="text" placeholder="Title" value={newReading.title} onChange={(e) => setNewReading((p) => ({ ...p, title: e.target.value }))} className={`${inputClass} flex-1`} style={{ borderColor: "var(--border-soft)" }} />
-                    <input type="url" placeholder="URL" value={newReading.url} onChange={(e) => setNewReading((p) => ({ ...p, url: e.target.value }))} className={`${inputClass} flex-1`} style={{ borderColor: "var(--border-soft)" }} />
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <label className="flex items-center gap-1 text-xs text-gray-600">
-                      <input type="radio" checked={newReading.viewMode === "modal"} onChange={() => setNewReading((p) => ({ ...p, viewMode: "modal" }))} /> Open in-site
-                    </label>
-                    <label className="flex items-center gap-1 text-xs text-gray-600">
-                      <input type="radio" checked={newReading.viewMode === "newtab"} onChange={() => setNewReading((p) => ({ ...p, viewMode: "newtab" }))} /> Open in new tab
-                    </label>
-                    <button type="button" onClick={addReading} className="ml-auto px-3 py-2 rounded-lg text-sm font-medium" style={{ border: "1px solid var(--border-soft)", color: "var(--text)" }}>Add</button>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {["workbook", "knowledge", "summative", "practical"].map((activityKey) => (
-              <div key={activityKey} className="pt-2 border-t" style={{ borderColor: "var(--border-soft)" }}>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="block text-xs text-[var(--text-muted)] capitalize">{activityKey} Questions</label>
-                  {!readOnly && (() => {
-                    const urlKey = activityKey === "workbook" ? "learner_workbook_url" : activityKey === "knowledge" ? "knowledge_module_url" : activityKey === "summative" ? "summative_assessment_url" : null;
-                    const fileUrl = urlKey ? form[urlKey] : null;
-                    if (!fileUrl) return null;
-                    return (
-                      <button
-                        type="button"
-                        onClick={() => generateFromPdf(activityKey, fileUrl)}
-                        disabled={generatingFor === activityKey}
-                        className="text-xs font-medium disabled:opacity-50"
-                        style={{ color: "var(--seal-gold)" }}
-                      >
-                        {generatingFor === activityKey ? "Generating..." : "Generate from PDF"}
-                      </button>
-                    );
-                  })()}
-                </div>
-                {readOnly ? (
-                  (questions[activityKey] || []).length === 0 ? (
-                    <span className="text-xs text-gray-400">No questions set</span>
-                  ) : (
-                    <ul className="text-sm text-gray-600 space-y-1 list-decimal list-inside">
-                      {questions[activityKey].map((q, i) => <li key={i}>{q}</li>)}
-                    </ul>
-                  )
-                ) : (
-                  <>
+            {step === 5 && (
+              <>
+                <div>
+                  <label className="block text-xs text-[var(--text-muted)] mb-1">Voice Recordings</label>
+                  {voiceRecordings.length > 0 && (
                     <ul className="space-y-1 mb-2">
-                      {(questions[activityKey] || []).map((q, i) => (
+                      {voiceRecordings.map((v, i) => (
                         <li key={i} className="flex items-center justify-between gap-2 text-sm p-2 rounded-lg" style={{ background: "var(--paper-muted)" }}>
-                          <span className="text-gray-700">{i + 1}. {q}</span>
-                          <button type="button" onClick={() => removeQuestion(activityKey, i)} className="text-xs text-red-500 hover:underline">Remove</button>
+                          <a href={v.url} target="_blank" rel="noopener noreferrer" className="truncate" style={{ color: "var(--brand-color)" }}>{v.label}</a>
+                          {!readOnly && <button type="button" onClick={() => removeVoice(i)} className="text-xs text-red-500 hover:underline flex-shrink-0">Remove</button>}
                         </li>
                       ))}
                     </ul>
-                    <div className="flex gap-2">
-                      <input
-                        type="text" placeholder="Type a question and press Add"
-                        value={newQuestionText[activityKey]}
-                        onChange={(e) => setNewQuestionText((prev) => ({ ...prev, [activityKey]: e.target.value }))}
-                        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addQuestion(activityKey); } }}
-                        className={inputClass} style={{ borderColor: "var(--border-soft)" }}
-                      />
-                      <button type="button" onClick={() => addQuestion(activityKey)} className="px-3 py-2 rounded-lg text-sm font-medium" style={{ border: "1px solid var(--border-soft)", color: "var(--text)" }}>
-                        Add
-                      </button>
+                  )}
+                  {!readOnly && (
+                    <div className="flex items-center gap-3">
+                      <input type="file" accept="audio/*" onChange={(e) => e.target.files[0] && handleVoiceUpload(e.target.files[0])} className="text-sm text-gray-500" />
+                      {uploadingVoice && <span className="text-xs text-[var(--seal-gold)] font-mono">Uploading...</span>}
                     </div>
-                  </>
-                )}
-              </div>
-            ))}
+                  )}
+                </div>
 
-            {!readOnly && (
+                <div className="pt-3 border-t" style={{ borderColor: "var(--border-soft)" }}>
+                  <label className="block text-xs text-[var(--text-muted)] mb-1">YouTube Videos</label>
+                  {youtubeLinks.length > 0 && (
+                    <ul className="space-y-1 mb-2">
+                      {youtubeLinks.map((y, i) => (
+                        <li key={i} className="flex items-center justify-between gap-2 text-sm p-2 rounded-lg" style={{ background: "var(--paper-muted)" }}>
+                          <span className="truncate text-gray-700">{y.title}</span>
+                          {!readOnly && <button type="button" onClick={() => removeYoutube(i)} className="text-xs text-red-500 hover:underline flex-shrink-0">Remove</button>}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {!readOnly && (
+                    <div className="flex gap-2">
+                      <input type="text" placeholder="Title" value={newYoutube.title} onChange={(e) => setNewYoutube((p) => ({ ...p, title: e.target.value }))} className={`${inputClass} flex-1`} style={{ borderColor: "var(--border-soft)" }} />
+                      <input type="url" placeholder="YouTube URL" value={newYoutube.url} onChange={(e) => setNewYoutube((p) => ({ ...p, url: e.target.value }))} className={`${inputClass} flex-1`} style={{ borderColor: "var(--border-soft)" }} />
+                      <button type="button" onClick={addYoutube} className="px-3 py-2 rounded-lg text-sm font-medium" style={{ border: "1px solid var(--border-soft)", color: "var(--text)" }}>Add</button>
+                    </div>
+                  )}
+                </div>
+
+                <div className="pt-3 border-t" style={{ borderColor: "var(--border-soft)" }}>
+                  <label className="block text-xs text-[var(--text-muted)] mb-1">Reading Links</label>
+                  {readingLinks.length > 0 && (
+                    <ul className="space-y-1 mb-2">
+                      {readingLinks.map((r, i) => (
+                        <li key={i} className="flex items-center justify-between gap-2 text-sm p-2 rounded-lg" style={{ background: "var(--paper-muted)" }}>
+                          <span className="truncate text-gray-700">{r.title} <span className="text-gray-400">({r.viewMode === "modal" ? "in-site" : "new tab"})</span></span>
+                          {!readOnly && <button type="button" onClick={() => removeReading(i)} className="text-xs text-red-500 hover:underline flex-shrink-0">Remove</button>}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {!readOnly && (
+                    <div className="space-y-2">
+                      <div className="flex gap-2">
+                        <input type="text" placeholder="Title" value={newReading.title} onChange={(e) => setNewReading((p) => ({ ...p, title: e.target.value }))} className={`${inputClass} flex-1`} style={{ borderColor: "var(--border-soft)" }} />
+                        <input type="url" placeholder="URL" value={newReading.url} onChange={(e) => setNewReading((p) => ({ ...p, url: e.target.value }))} className={`${inputClass} flex-1`} style={{ borderColor: "var(--border-soft)" }} />
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <label className="flex items-center gap-1 text-xs text-gray-600">
+                          <input type="radio" checked={newReading.viewMode === "modal"} onChange={() => setNewReading((p) => ({ ...p, viewMode: "modal" }))} /> Open in-site
+                        </label>
+                        <label className="flex items-center gap-1 text-xs text-gray-600">
+                          <input type="radio" checked={newReading.viewMode === "newtab"} onChange={() => setNewReading((p) => ({ ...p, viewMode: "newtab" }))} /> Open in new tab
+                        </label>
+                        <button type="button" onClick={addReading} className="ml-auto px-3 py-2 rounded-lg text-sm font-medium" style={{ border: "1px solid var(--border-soft)", color: "var(--text)" }}>Add</button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+
+            {step === 6 && (
+              <>
+                {["workbook", "knowledge", "summative", "practical"].map((activityKey) => (
+                  <div key={activityKey} className="pt-2 border-t first:border-0 first:pt-0" style={{ borderColor: "var(--border-soft)" }}>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-xs text-[var(--text-muted)] capitalize">{activityKey} Questions</label>
+                      {!readOnly && (() => {
+                        const urlKey = activityKey === "workbook" ? "learner_workbook_url" : activityKey === "knowledge" ? "knowledge_module_url" : activityKey === "summative" ? "summative_assessment_url" : null;
+                        const fileUrl = urlKey ? form[urlKey] : null;
+                        if (!fileUrl) return null;
+                        return (
+                          <button
+                            type="button"
+                            onClick={() => generateFromPdf(activityKey, fileUrl)}
+                            disabled={generatingFor === activityKey}
+                            className="text-xs font-medium disabled:opacity-50"
+                            style={{ color: "var(--seal-gold)" }}
+                          >
+                            {generatingFor === activityKey ? "Generating..." : "Generate from PDF"}
+                          </button>
+                        );
+                      })()}
+                    </div>
+                    {readOnly ? (
+                      (questions[activityKey] || []).length === 0 ? (
+                        <span className="text-xs text-gray-400">No questions set</span>
+                      ) : (
+                        <ul className="text-sm text-gray-600 space-y-1 list-decimal list-inside">
+                          {questions[activityKey].map((q, i) => <li key={i}>{q}</li>)}
+                        </ul>
+                      )
+                    ) : (
+                      <>
+                        <ul className="space-y-1 mb-2">
+                          {(questions[activityKey] || []).map((q, i) => (
+                            <li key={i} className="flex items-center justify-between gap-2 text-sm p-2 rounded-lg" style={{ background: "var(--paper-muted)" }}>
+                              <span className="text-gray-700">{i + 1}. {q}</span>
+                              <button type="button" onClick={() => removeQuestion(activityKey, i)} className="text-xs text-red-500 hover:underline">Remove</button>
+                            </li>
+                          ))}
+                        </ul>
+                        <div className="flex gap-2">
+                          <input
+                            type="text" placeholder="Type a question and press Add"
+                            value={newQuestionText[activityKey]}
+                            onChange={(e) => setNewQuestionText((prev) => ({ ...prev, [activityKey]: e.target.value }))}
+                            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addQuestion(activityKey); } }}
+                            className={inputClass} style={{ borderColor: "var(--border-soft)" }}
+                          />
+                          <button type="button" onClick={() => addQuestion(activityKey)} className="px-3 py-2 rounded-lg text-sm font-medium" style={{ border: "1px solid var(--border-soft)", color: "var(--text)" }}>
+                            Add
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                ))}
+              </>
+            )}
+          </div>
+
+          <div className="p-8 pt-4 flex-shrink-0 flex items-center justify-between gap-3 border-t" style={{ borderColor: "var(--border-soft)" }}>
+            <button
+              type="button" onClick={goBack} disabled={step === 0}
+              className="px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-30"
+              style={{ color: "var(--text)" }}
+            >
+              Back
+            </button>
+
+            {step < STEPS.length - 1 ? (
               <button
-                type="submit" disabled={saving}
-                className="w-full py-3 mt-2 rounded-xl text-white font-medium transition-all hover:brightness-110 disabled:opacity-50"
+                type="button" onClick={goNext} disabled={!canGoNext()}
+                className="px-6 py-2.5 rounded-lg text-white text-sm font-medium disabled:opacity-50"
+                style={{ background: "var(--brand-color)" }}
+              >
+                Next: {STEPS[step + 1].label}
+              </button>
+            ) : !readOnly ? (
+              <button
+                type="button" onClick={handleSave} disabled={saving}
+                className="px-6 py-2.5 rounded-lg text-white text-sm font-medium disabled:opacity-50"
                 style={{ background: "var(--brand-color)" }}
               >
                 {saving ? "Saving..." : week.id ? "Save Changes" : "Publish Week"}
               </button>
+            ) : (
+              <span className="text-xs text-gray-400">Locked</span>
             )}
-          </form>
+          </div>
         </div>
       </div>
     </Portal>
