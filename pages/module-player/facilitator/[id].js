@@ -747,7 +747,11 @@ function WeekModal({ week, onClose, onSaved }) {
   const [saving, setSaving] = useState(false);
   const [schedulingMeeting, setSchedulingMeeting] = useState(false);
   const [questions, setQuestions] = useState(week.activity_questions || { workbook: [], knowledge: [], summative: [], practical: [] });
-  const [newQuestionText, setNewQuestionText] = useState({ workbook: "", knowledge: "", summative: "", practical: "" });
+    const [newQuestionText, setNewQuestionText] = useState({ workbook: "", knowledge: "", summative: "", practical: "" });
+  const [newQuestionType, setNewQuestionType] = useState({ workbook: "free", knowledge: "free", summative: "free", practical: "free" });
+  const [newQuestionMarks, setNewQuestionMarks] = useState({ workbook: "", knowledge: "", summative: "", practical: "" });
+  const [newQuestionOptions, setNewQuestionOptions] = useState({ workbook: [], knowledge: [], summative: [], practical: [] });
+  const [newOptionText, setNewOptionText] = useState({ workbook: "", knowledge: "", summative: "", practical: "" });
   const [chapters, setChapters] = useState(week.guide_chapters || []);
   const [extractingChapters, setExtractingChapters] = useState(false);
   const [voiceRecordings, setVoiceRecordings] = useState(week.voice_recordings || []);
@@ -870,8 +874,30 @@ function WeekModal({ week, onClose, onSaved }) {
   const addQuestion = (activityKey) => {
     const text = newQuestionText[activityKey]?.trim();
     if (!text) return;
-    setQuestions((prev) => ({ ...prev, [activityKey]: [...(prev[activityKey] || []), text] }));
+    setQuestions((prev) => ({
+      ...prev,
+      [activityKey]: [...(prev[activityKey] || []), {
+        text,
+        type: newQuestionType[activityKey],
+        marks: newQuestionMarks[activityKey] ? Number(newQuestionMarks[activityKey]) : null,
+        options: newQuestionOptions[activityKey],
+        media: null,
+      }],
+    }));
     setNewQuestionText((prev) => ({ ...prev, [activityKey]: "" }));
+    setNewQuestionType((prev) => ({ ...prev, [activityKey]: "free" }));
+    setNewQuestionMarks((prev) => ({ ...prev, [activityKey]: "" }));
+    setNewQuestionOptions((prev) => ({ ...prev, [activityKey]: [] }));
+  };
+
+  const addOptionToQuestion = (activityKey) => {
+    const opt = newOptionText[activityKey]?.trim();
+    if (!opt) return;
+    setNewQuestionOptions((prev) => ({ ...prev, [activityKey]: [...prev[activityKey], opt] }));
+    setNewOptionText((prev) => ({ ...prev, [activityKey]: "" }));
+  };
+  const removeOptionFromQuestion = (activityKey, i) => {
+    setNewQuestionOptions((prev) => ({ ...prev, [activityKey]: prev[activityKey].filter((_, idx) => idx !== i) }));
   };
 
   const removeQuestion = (activityKey, index) => {
@@ -1216,35 +1242,84 @@ function WeekModal({ week, onClose, onSaved }) {
                         );
                       })()}
                     </div>
-                    {readOnly ? (
+                                        {readOnly ? (
                       (questions[activityKey] || []).length === 0 ? (
                         <span className="text-xs text-gray-400">No questions set</span>
                       ) : (
                         <ul className="text-sm text-gray-600 space-y-1 list-decimal list-inside">
-                          {questions[activityKey].map((q, i) => <li key={i}>{q}</li>)}
+                          {questions[activityKey].map((q, i) => <li key={i}>{typeof q === "string" ? q : q.text}</li>)}
                         </ul>
                       )
                     ) : (
                       <>
                         <ul className="space-y-1 mb-2">
-                          {(questions[activityKey] || []).map((q, i) => (
-                            <li key={i} className="flex items-center justify-between gap-2 text-sm p-2 rounded-lg" style={{ background: "var(--paper-muted)" }}>
-                              <span className="text-gray-700">{i + 1}. {q}</span>
-                              <button type="button" onClick={() => removeQuestion(activityKey, i)} className="text-xs text-red-500 hover:underline">Remove</button>
-                            </li>
-                          ))}
+                          {(questions[activityKey] || []).map((q, i) => {
+                            const qText = typeof q === "string" ? q : q.text;
+                            const qType = typeof q === "string" ? "free" : q.type;
+                            const qMarks = typeof q === "string" ? null : q.marks;
+                            return (
+                              <li key={i} className="flex items-center justify-between gap-2 text-sm p-2 rounded-lg" style={{ background: "var(--paper-muted)" }}>
+                                <span className="text-gray-700">{i + 1}. {qText} <span className="text-xs text-gray-400 capitalize">({qType.replace("_", " ")}{qMarks != null ? `, ${qMarks} marks` : ""})</span></span>
+                                <button type="button" onClick={() => removeQuestion(activityKey, i)} className="text-xs text-red-500 hover:underline">Remove</button>
+                              </li>
+                            );
+                          })}
                         </ul>
-                        <div className="flex gap-2">
+                        <div className="space-y-2">
                           <input
-                            type="text" placeholder="Type a question and press Add"
+                            type="text" placeholder="Question text"
                             value={newQuestionText[activityKey]}
                             onChange={(e) => setNewQuestionText((prev) => ({ ...prev, [activityKey]: e.target.value }))}
-                            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addQuestion(activityKey); } }}
                             className={inputClass} style={{ borderColor: "var(--border-soft)" }}
                           />
-                          <button type="button" onClick={() => addQuestion(activityKey)} className="px-3 py-2 rounded-lg text-sm font-medium" style={{ border: "1px solid var(--border-soft)", color: "var(--text)" }}>
-                            Add
-                          </button>
+                          <div className="flex gap-2">
+                            <select
+                              value={newQuestionType[activityKey]}
+                              onChange={(e) => setNewQuestionType((prev) => ({ ...prev, [activityKey]: e.target.value }))}
+                              className={`${inputClass} flex-1`} style={{ borderColor: "var(--border-soft)" }}
+                            >
+                              <option value="free">Free text</option>
+                              <option value="mcq">Multiple choice (single answer)</option>
+                              <option value="multi_select">Multiple choice (select several)</option>
+                              <option value="yesno">Yes / No</option>
+                              <option value="image_answer">Image upload</option>
+                              <option value="audio_answer">Audio recording</option>
+                            </select>
+                            <input
+                              type="number" placeholder="Marks"
+                              value={newQuestionMarks[activityKey]}
+                              onChange={(e) => setNewQuestionMarks((prev) => ({ ...prev, [activityKey]: e.target.value }))}
+                              className={`${inputClass} w-24`} style={{ borderColor: "var(--border-soft)" }}
+                            />
+                            <button type="button" onClick={() => addQuestion(activityKey)} className="px-3 py-2 rounded-lg text-sm font-medium" style={{ border: "1px solid var(--border-soft)", color: "var(--text)" }}>
+                              Add
+                            </button>
+                          </div>
+                          {(newQuestionType[activityKey] === "mcq" || newQuestionType[activityKey] === "multi_select") && (
+                            <div className="p-3 rounded-lg" style={{ background: "var(--paper-muted)" }}>
+                              <p className="text-xs text-[var(--text-muted)] mb-2">Answer options</p>
+                              {newQuestionOptions[activityKey].length > 0 && (
+                                <ul className="space-y-1 mb-2">
+                                  {newQuestionOptions[activityKey].map((opt, i) => (
+                                    <li key={i} className="flex items-center justify-between gap-2 text-sm p-1.5 rounded" style={{ background: "white" }}>
+                                      <span>{opt}</span>
+                                      <button type="button" onClick={() => removeOptionFromQuestion(activityKey, i)} className="text-xs text-red-500 hover:underline">Remove</button>
+                                    </li>
+                                  ))}
+                                </ul>
+                              )}
+                              <div className="flex gap-2">
+                                <input
+                                  type="text" placeholder="Add an option"
+                                  value={newOptionText[activityKey]}
+                                  onChange={(e) => setNewOptionText((prev) => ({ ...prev, [activityKey]: e.target.value }))}
+                                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addOptionToQuestion(activityKey); } }}
+                                  className={`${inputClass} flex-1`} style={{ borderColor: "var(--border-soft)" }}
+                                />
+                                <button type="button" onClick={() => addOptionToQuestion(activityKey)} className="px-3 py-2 rounded-lg text-sm font-medium" style={{ border: "1px solid var(--border-soft)", color: "var(--text)" }}>Add Option</button>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </>
                     )}
