@@ -92,6 +92,7 @@ export const config = {
     "/dashboard/:path*",
     "/facilitator/:path*",
     "/admin/:path*",
+    "/superadmin/:path*",
     "/module-player/:path*",
     "/gradesubmissions/:path*",
     "/studentsubmissionspage/:path*",

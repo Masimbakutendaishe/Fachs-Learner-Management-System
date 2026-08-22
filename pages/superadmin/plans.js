@@ -76,6 +76,7 @@ function PlanModal({ plan, onClose, onSaved }) {
   const [price, setPrice] = useState(plan.price ?? "");
   const [billingInterval, setBillingInterval] = useState(plan.billing_interval || "month");
   const [maxUsers, setMaxUsers] = useState(plan.max_users ?? "");
+  const [stripePriceId, setStripePriceId] = useState(plan.stripe_price_id || "");
   const [saving, setSaving] = useState(false);
 
   const inputClass = "w-full px-3 py-2 rounded-lg border text-sm";
@@ -84,11 +85,12 @@ function PlanModal({ plan, onClose, onSaved }) {
     e.preventDefault();
     setSaving(true);
     try {
-      const payload = {
+            const payload = {
         name,
         price: Number(price),
         billing_interval: billingInterval,
         max_users: maxUsers === "" ? null : Number(maxUsers),
+        stripe_price_id: stripePriceId || null,
       };
       const { error } = plan.id
         ? await supabase.from("plans").update(payload).eq("id", plan.id)
@@ -119,7 +121,13 @@ function PlanModal({ plan, onClose, onSaved }) {
                 <option value="year">Yearly</option>
               </select>
             </div>
-            <input type="number" placeholder="Max users (leave blank for unlimited)" value={maxUsers} onChange={(e) => setMaxUsers(e.target.value)} className={inputClass} style={{ borderColor: "var(--border-soft)" }} />
+                        <input type="number" placeholder="Max users (leave blank for unlimited)" value={maxUsers} onChange={(e) => setMaxUsers(e.target.value)} className={inputClass} style={{ borderColor: "var(--border-soft)" }} />
+            <div>
+              <input type="text" placeholder="Stripe Price ID (e.g. price_1AbC...)" value={stripePriceId} onChange={(e) => setStripePriceId(e.target.value)} className={inputClass} style={{ borderColor: "var(--border-soft)" }} />
+              <p className="text-xs text-gray-400 mt-1">
+                From your Stripe dashboard, Product catalog, this plan's price. Required for institutions to actually subscribe.
+              </p>
+            </div>
             <button type="submit" disabled={saving} className="w-full py-3 mt-2 rounded-xl text-white font-medium disabled:opacity-50" style={{ background: "var(--brand-color)" }}>
               {saving ? "Saving..." : plan.id ? "Save Changes" : "Create Plan"}
             </button>

@@ -95,11 +95,16 @@ export default function MobileNavbar() {
           </Link>
         </div>
       )}
-      <Link href="/" className="flex items-center gap-2 font-display font-semibold text-lg tracking-tight">
-        {institution?.logo_url ? (
-          <img src={institution.logo_url} alt={institution.name} className="h-8 w-auto object-contain" />
+      <Link href="/" className="flex items-center gap-2 font-display font-semibold text-lg tracking-tight max-w-[50vw] md:max-w-none overflow-hidden">
+        {institution && profile?.role !== "superadmin" ? (
+          <>
+            {institution.logo_url && (
+              <img src={institution.logo_url} alt={institution.name} className="h-8 w-auto object-contain flex-shrink-0" />
+            )}
+            <span className="truncate">{institution.name} <span className="opacity-80">LMS</span></span>
+          </>
         ) : (
-          <span>{institution?.name || "Fachs LMS"}</span>
+          <span>Fachs LMS</span>
         )}
       </Link>
 
