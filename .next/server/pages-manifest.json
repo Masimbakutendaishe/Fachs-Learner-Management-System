@@ -1,9 +1,10 @@
 {
   "/_app": "pages/_app.js",
-  "/_error": "pages/_error.js",
   "/_document": "pages/_document.js",
+  "/_error": "pages/_error.js",
   "/superadmin": "pages/superadmin.js",
   "/": "pages/index.js",
-  "/admin/institution-settings": "pages/admin/institution-settings.js",
-  "/reset-password": "pages/reset-password.js"
+  "/profile": "pages/profile.js",
+  "/superadmin/users": "pages/superadmin/users.js",
+  "/api/superadmin/list-users": "pages/api/superadmin/list-users.js"
 }
