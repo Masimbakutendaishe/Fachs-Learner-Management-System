@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import Head from "next/head";
+import Link from "next/link";
 import Button from "../components/Button";
 import AuthModal from "../components/AuthModal";
 import ChatModal from "../components/ChatModal";
@@ -9,7 +10,7 @@ import { createClient } from "../lib/supabase/client";
 import { useAuth } from "./context/AuthContext";
 
 export default function Home() {
-  const { institution, user, role } = useAuth();
+  const { institution, user, role, profile } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [mode, setMode] = useState("signin");
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -18,6 +19,7 @@ export default function Home() {
   const [upcomingSessions, setUpcomingSessions] = useState([]);
   const [newAnnouncement, setNewAnnouncement] = useState({ title: "", body: "" });
   const [postingAnnouncement, setPostingAnnouncement] = useState(false);
+  const [pendingGradingCount, setPendingGradingCount] = useState(0);
 
   const supabase = createClient();
 
@@ -41,6 +43,17 @@ export default function Home() {
         .order("session_datetime", { ascending: true })
         .limit(5);
       setUpcomingSessions((weeksData || []).filter((w) => w.programmes?.facilitator_id === user.id));
+
+      const { data: myProgrammes } = await supabase.from("programmes").select("id").eq("facilitator_id", user.id);
+      const programmeIds = (myProgrammes || []).map((p) => p.id);
+      if (programmeIds.length > 0) {
+        const { count } = await supabase
+          .from("submissions")
+          .select("id", { count: "exact", head: true })
+          .in("programme_id", programmeIds)
+          .eq("status", "submitted");
+        setPendingGradingCount(count || 0);
+      }
     } else if (role === "learner") {
       const { data: enrollments } = await supabase.from("enrollments").select("programme_id").eq("user_id", user.id);
       const programmeIds = (enrollments || []).map((e) => e.programme_id);
@@ -132,19 +145,33 @@ export default function Home() {
         <meta property="og:type" content="website" />
       </Head>
 
-      {/* Hero */}
-      <section className="text-center max-w-3xl mx-auto pt-8 pb-16 animate-fade-up">
-        <p className="text-xs font-mono tracking-wide text-[var(--text-muted)] mb-4">
-          MULTI-INSTITUTION LEARNING PLATFORM
-        </p>
-                <h1 className="font-display text-4xl md:text-5xl font-semibold mb-4" style={{ color: "var(--text)" }}>
-          {institution?.name ? `Welcome to ${institution.name}` : "Learning, built for how your institution actually runs"}
-        </h1>
-        <p className="text-lg text-[var(--text-muted)] mb-8">
-          {institution?.motto || "Qualifications, live sessions, assessments, and progress, all in one place. Built for training providers and schools alike."}
-        </p>
+        {sessionUser ? (
+        <section className="max-w-5xl mx-auto pt-8 pb-8 animate-fade-up">
+          <p className="text-xs font-mono tracking-wide text-[var(--text-muted)] mb-2">
+            {institution?.name || "FACHS LMS"}
+          </p>
+          <h1 className="font-display text-3xl font-semibold mb-1" style={{ color: "var(--text)" }}>
+            Welcome back{profile?.first_name ? `, ${profile.first_name}` : ""}
+          </h1>
+          <p className="text-sm text-[var(--text-muted)]">
+            {role === "facilitator" && `You're facilitating ${institution?.name || "your institution"}'s courses.`}
+            {role === "learner" && "Here's what's happening across your courses."}
+            {role === "institution_admin" && "Here's an overview of your institution."}
+            {role === "superadmin" && "Platform overview."}
+          </p>
+        </section>
+      ) : (
+        <section className="text-center max-w-3xl mx-auto pt-8 pb-16 animate-fade-up">
+          <p className="text-xs font-mono tracking-wide text-[var(--text-muted)] mb-4">
+            MULTI-INSTITUTION LEARNING PLATFORM
+          </p>
+          <h1 className="font-display text-4xl md:text-5xl font-semibold mb-4" style={{ color: "var(--text)" }}>
+            {institution?.name ? `Welcome to ${institution.name}` : "Learning, built for how your institution actually runs"}
+          </h1>
+          <p className="text-lg text-[var(--text-muted)] mb-8">
+            {institution?.motto || "Qualifications, live sessions, assessments, and progress, all in one place. Built for training providers and schools alike."}
+          </p>
 
-        {!sessionUser && (
           <div className="flex items-center justify-center gap-3 mb-8">
             <Button
               className="btn-silver font-medium px-6 py-3 rounded-xl transition-all hover:brightness-110"
@@ -160,15 +187,15 @@ export default function Home() {
               Sign In
             </Button>
           </div>
-        )}
 
-        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-mono" style={{ background: "var(--seal-gold-soft)", color: "var(--seal-gold)" }}>
-          <span className="w-1.5 h-1.5 rounded-full" style={{ background: "var(--seal-gold)" }} />
-          QCTO & SETA Accredited Programmes
-        </div>
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-mono" style={{ background: "var(--seal-gold-soft)", color: "var(--seal-gold)" }}>
+            <span className="w-1.5 h-1.5 rounded-full" style={{ background: "var(--seal-gold)" }} />
+            QCTO & SETA Accredited Programmes
+          </div>
+        </section>
+      )}
 
-        <AuthModal isOpen={isOpen} onClose={() => setIsOpen(false)} mode={mode} />
-      </section>
+      <AuthModal isOpen={isOpen} onClose={() => setIsOpen(false)} mode={mode} />
 
             {sessionUser ? (
         <section className="grid md:grid-cols-2 gap-6 max-w-5xl mx-auto mb-12">
@@ -247,7 +274,46 @@ export default function Home() {
         </section>
       )}
 
+        {sessionUser && (
+        <section className="max-w-5xl mx-auto mb-16">
+          <h2 className="font-display text-lg font-semibold mb-4" style={{ color: "var(--text)" }}>Quick Links</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {role === "learner" && (
+              <>
+                <Link href="/dashboard" className="paper p-5 card-lift text-sm font-medium" style={{ color: "var(--text)" }}>Continue Learning</Link>
+                <Link href="/progress" className="paper p-5 card-lift text-sm font-medium" style={{ color: "var(--text)" }}>My Progress &amp; Marks</Link>
+              </>
+            )}
+            {role === "facilitator" && (
+              <>
+                <Link href="/facilitator/dashboard" className="paper p-5 card-lift text-sm font-medium" style={{ color: "var(--text)" }}>My Courses</Link>
+                <div className="paper p-5">
+                  <p className="text-2xl font-mono font-semibold" style={{ color: "var(--brand-color)" }}>{pendingGradingCount}</p>
+                  <p className="text-sm text-gray-500 mt-1">Awaiting Grading</p>
+                </div>
+              </>
+            )}
+            {role === "institution_admin" && (
+              <>
+                <Link href="/admin/institution-settings" className="paper p-5 card-lift text-sm font-medium" style={{ color: "var(--text)" }}>Institution Settings</Link>
+                <Link href="/admin/users" className="paper p-5 card-lift text-sm font-medium" style={{ color: "var(--text)" }}>Manage Users</Link>
+                <Link href="/admin/fees" className="paper p-5 card-lift text-sm font-medium" style={{ color: "var(--text)" }}>Fees &amp; Invoices</Link>
+                <Link href="/admin/billing" className="paper p-5 card-lift text-sm font-medium" style={{ color: "var(--text)" }}>Billing</Link>
+              </>
+            )}
+            {role === "superadmin" && (
+              <>
+                <Link href="/superadmin" className="paper p-5 card-lift text-sm font-medium" style={{ color: "var(--text)" }}>Institutions</Link>
+                <Link href="/superadmin/users" className="paper p-5 card-lift text-sm font-medium" style={{ color: "var(--text)" }}>Users</Link>
+                <Link href="/superadmin/plans" className="paper p-5 card-lift text-sm font-medium" style={{ color: "var(--text)" }}>Plans</Link>
+              </>
+            )}
+          </div>
+        </section>
+      )}
+
       {/* Stats */}
+      {!sessionUser && (
       <section className="max-w-5xl mx-auto mb-16">
         <div className="paper p-8 animate-fade-up stagger-3">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
@@ -282,13 +348,14 @@ export default function Home() {
               <p className="mt-2 text-sm text-[var(--text-muted)]">Accredited</p>
             </div>
 
-            <div>
+                        <div>
               <span className="font-mono text-3xl font-semibold" style={{ color: "var(--seal-gold)" }}>SETA</span>
               <p className="mt-2 text-sm text-[var(--text-muted)]">Programmes</p>
             </div>
           </div>
         </div>
       </section>
+      )}
 
       {/* Floating Chat Button */}
       <button
