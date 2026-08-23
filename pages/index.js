@@ -20,6 +20,9 @@ export default function Home() {
   const [newAnnouncement, setNewAnnouncement] = useState({ title: "", body: "" });
   const [postingAnnouncement, setPostingAnnouncement] = useState(false);
   const [pendingGradingCount, setPendingGradingCount] = useState(0);
+  const [tasks, setTasks] = useState([]);
+  const [newTask, setNewTask] = useState({ title: "", due_date: "", due_time: "" });
+  const [addingTask, setAddingTask] = useState(false);
 
   const supabase = createClient();
 
@@ -53,6 +56,14 @@ export default function Home() {
         .order("session_datetime", { ascending: true })
         .limit(5);
       setUpcomingSessions((weeksData || []).filter((w) => w.programmes?.facilitator_id === user.id));
+
+      const { data: tasksData } = await supabase
+        .from("facilitator_tasks")
+        .select("*")
+        .eq("facilitator_id", user.id)
+        .eq("completed", false)
+        .order("due_date", { ascending: true });
+      setTasks(tasksData || []);
 
       const { data: myProgrammes } = await supabase.from("programmes").select("id").eq("facilitator_id", user.id);
       const programmeIds = (myProgrammes || []).map((p) => p.id);
@@ -105,6 +116,30 @@ export default function Home() {
       fetchHomeData();
     }
     setPostingAnnouncement(false);
+  };
+
+  const addTask = async () => {
+    if (!newTask.title.trim() || !newTask.due_date) return;
+    setAddingTask(true);
+    const { error } = await supabase.from("facilitator_tasks").insert({
+      facilitator_id: user.id,
+      institution_id: institution.id,
+      title: newTask.title,
+      due_date: newTask.due_date,
+      due_time: newTask.due_time || null,
+    });
+    if (error) alert(error.message);
+    else {
+      setNewTask({ title: "", due_date: "", due_time: "" });
+      fetchHomeData();
+    }
+    setAddingTask(false);
+  };
+
+  const completeTask = async (taskId) => {
+    const { error } = await supabase.from("facilitator_tasks").update({ completed: true }).eq("id", taskId);
+    if (error) alert(error.message);
+    else fetchHomeData();
   };
 
   const openModal = (selectedMode) => {
@@ -260,23 +295,86 @@ export default function Home() {
             )}
           </div>
 
-          <div className="paper p-6 animate-fade-up stagger-2">
+            <div className="paper p-6 animate-fade-up stagger-2">
             <h2 className="font-display text-xl font-semibold mb-4" style={{ color: "var(--text)" }}>
               {role === "facilitator" ? "My Schedule" : "Upcoming Sessions"}
             </h2>
-            {upcomingSessions.length === 0 ? (
-              <p className="text-sm text-gray-400">Nothing scheduled right now.</p>
-            ) : (
-              <ul className="space-y-3">
-                {upcomingSessions.map((s, i) => (
-                  <li key={i} className="p-3 rounded-xl text-sm" style={{ background: "var(--paper-muted)" }}>
-                    <p className="font-medium" style={{ color: "var(--text)" }}>{s.programmes?.name}</p>
-                    <p className="text-gray-600">{s.unit_standard_title}</p>
-                    <p className="text-xs text-gray-400 mt-1 font-mono">{new Date(s.session_datetime).toLocaleString()}</p>
-                  </li>
-                ))}
-              </ul>
+
+            {role === "facilitator" && (
+              <div className="mb-4 p-3 rounded-xl space-y-2" style={{ background: "var(--paper-muted)" }}>
+                <input
+                  type="text" placeholder="Task (e.g. Grade Workbook submissions)" value={newTask.title}
+                  onChange={(e) => setNewTask((p) => ({ ...p, title: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-lg border text-sm" style={{ borderColor: "var(--border-soft)" }}
+                />
+                <div className="flex gap-2">
+                  <input
+                    type="date" value={newTask.due_date}
+                    onChange={(e) => setNewTask((p) => ({ ...p, due_date: e.target.value }))}
+                    className="flex-1 px-3 py-2 rounded-lg border text-sm" style={{ borderColor: "var(--border-soft)" }}
+                  />
+                  <input
+                    type="time" value={newTask.due_time}
+                    onChange={(e) => setNewTask((p) => ({ ...p, due_time: e.target.value }))}
+                    className="w-32 px-3 py-2 rounded-lg border text-sm" style={{ borderColor: "var(--border-soft)" }}
+                  />
+                </div>
+                <button onClick={addTask} disabled={addingTask} className="text-xs font-medium px-3 py-1.5 rounded-lg disabled:opacity-50" style={{ background: "var(--brand-color)", color: "white" }}>
+                  {addingTask ? "Adding..." : "Add Task"}
+                </button>
+              </div>
             )}
+
+            {(() => {
+              const now = new Date();
+              const combined = [
+                ...upcomingSessions.map((s) => ({
+                  kind: "session",
+                  label: s.programmes?.name,
+                  detail: s.unit_standard_title,
+                  when: new Date(s.session_datetime),
+                })),
+                ...tasks.map((t) => ({
+                  kind: "task",
+                  id: t.id,
+                  label: t.title,
+                  detail: null,
+                  when: new Date(`${t.due_date}${t.due_time ? "T" + t.due_time : "T00:00"}`),
+                })),
+              ].sort((a, b) => a.when - b.when);
+
+              if (combined.length === 0) {
+                return <p className="text-sm text-gray-400">Nothing scheduled right now.</p>;
+              }
+
+              return (
+                <ul className="space-y-3">
+                  {combined.map((item, i) => {
+                    const isDueNow = item.when <= now;
+                    return (
+                      <li
+                        key={i}
+                        className="p-3 rounded-xl text-sm flex items-center justify-between gap-2"
+                        style={isDueNow ? { background: "#FEF2F2" } : { background: "var(--paper-muted)" }}
+                      >
+                        <div>
+                          <p className="font-medium" style={{ color: isDueNow ? "#B91C1C" : "var(--text)" }}>
+                            {isDueNow && "Due now: "}{item.label}
+                          </p>
+                          {item.detail && <p className="text-gray-600">{item.detail}</p>}
+                          <p className="text-xs text-gray-400 mt-1 font-mono">{item.when.toLocaleString()}</p>
+                        </div>
+                        {item.kind === "task" && (
+                          <button onClick={() => completeTask(item.id)} className="text-xs font-medium px-2.5 py-1 rounded-lg flex-shrink-0" style={{ border: "1px solid var(--border-soft)", color: "var(--text)" }}>
+                            Done
+                          </button>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              );
+            })()}
           </div>
         </section>
       ) : (
