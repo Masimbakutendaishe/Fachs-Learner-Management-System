@@ -87,7 +87,6 @@ export default function FacilitatorDashboard() {
         <p className="text-[var(--text-muted)] text-sm mt-1">Manage your qualifications and learner progress</p>
       </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
         <section className="animate-fade-up stagger-1">
           <div className="flex justify-between items-center mb-4">
             <h2 className="font-display text-lg font-semibold" style={{ color: "var(--text)" }}>
@@ -120,7 +119,7 @@ export default function FacilitatorDashboard() {
               No qualifications assigned yet.
             </div>
           ) : (
-            <ul className="grid gap-4">
+                      <ul className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {facilitations.map((f, i) => {
                 const q = f.qualifications;
                 return (
@@ -161,10 +160,9 @@ export default function FacilitatorDashboard() {
                   </li>
                 );
               })}
-            </ul>
+                  </ul>
           )}
         </section>
-      </div>
 
       {addModalOpen && (
         <AddQualificationModal
