@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Menu, X, User, LayoutDashboard, LogOut, Bell, UserCog } from "lucide-react";
+import { Menu, X, User, LayoutDashboard, LogOut, Bell, UserCog, Home } from "lucide-react";
 import { createClient as createSupabaseClient } from "../lib/supabase/client";
 import FacilitatorLoginModal from "./FacilitatorLoginModal";
 import AuthModal from "./AuthModal";
@@ -65,10 +65,10 @@ export default function MobileNavbar() {
 
     const isPlatformRole = profile?.role === "institution_admin" || profile?.role === "superadmin";
 
+  const hasCenteredIcons = isPlatformRole || profile?.role === "facilitator";
+
   const menuItems =
-    profile?.role === "facilitator"
-      ? [{ name: "Home", href: "/" }]
-      : isPlatformRole
+    hasCenteredIcons
       ? []
       : [
           { name: "Home", href: "/" },
@@ -77,25 +77,7 @@ export default function MobileNavbar() {
 
     return (
     <nav className="flex justify-between items-center h-16 relative" style={{ color: "var(--text)" }}>
-      {isAuthenticated && isPlatformRole && (
-        <div className="hidden md:flex absolute left-1/2 -translate-x-1/2 items-center gap-2">
-          <Link
-            href={profile?.role === "superadmin" ? "/superadmin" : "/admin/institution-settings"}
-            title="Dashboard"
-            className="p-2.5 rounded-lg hover:bg-black/5 transition-colors"
-          >
-            <LayoutDashboard size={20} className="text-[var(--text-muted)]" />
-          </Link>
-          <Link
-            href={profile?.role === "superadmin" ? "/superadmin/users" : "/admin/users"}
-            title="Manage Users"
-            className="p-2.5 rounded-lg hover:bg-black/5 transition-colors"
-          >
-            <UserCog size={20} className="text-[var(--text-muted)]" />
-          </Link>
-        </div>
-      )}
-      <Link href="/" className="flex items-center gap-2 font-display font-semibold text-lg tracking-tight max-w-[50vw] md:max-w-none overflow-hidden">
+       <Link href="/" className="flex items-center gap-2 font-display font-semibold text-lg tracking-tight max-w-[50vw] md:max-w-none overflow-hidden">
         {institution && profile?.role !== "superadmin" ? (
           <>
             {institution.logo_url && (
@@ -117,27 +99,40 @@ export default function MobileNavbar() {
       </div>
 
       <div className="hidden md:flex items-center gap-3">
-                {isAuthenticated && isPlatformRole && (
+                     {isAuthenticated && hasCenteredIcons && (
           <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2">
-            <Link
-              href={profile?.role === "superadmin" ? "/superadmin" : "/admin/institution-settings"}
-              title="Dashboard"
-              className="p-2.5 rounded-lg hover:bg-black/5 transition-colors"
-            >
-              <LayoutDashboard size={20} className="text-[var(--text-muted)]" />
-            </Link>
-            <Link
-              href={profile?.role === "superadmin" ? "/superadmin/users" : "/admin/users"}
-              title="Manage Users"
-              className="p-2.5 rounded-lg hover:bg-black/5 transition-colors"
-            >
-              <UserCog size={20} className="text-[var(--text-muted)]" />
-            </Link>
+            {profile?.role === "facilitator" ? (
+              <>
+                <Link href="/" title="Home" className="p-2.5 rounded-lg hover:bg-black/5 transition-colors">
+                  <Home size={20} className="text-[var(--text-muted)]" />
+                </Link>
+                <Link href="/facilitator/dashboard" title="Dashboard" className="p-2.5 rounded-lg hover:bg-black/5 transition-colors">
+                  <LayoutDashboard size={20} className="text-[var(--text-muted)]" />
+                </Link>
+              </>
+            ) : (
+              <>
+                <Link
+                  href={profile?.role === "superadmin" ? "/superadmin" : "/admin/institution-settings"}
+                  title="Dashboard"
+                  className="p-2.5 rounded-lg hover:bg-black/5 transition-colors"
+                >
+                  <LayoutDashboard size={20} className="text-[var(--text-muted)]" />
+                </Link>
+                <Link
+                  href={profile?.role === "superadmin" ? "/superadmin/users" : "/admin/users"}
+                  title="Manage Users"
+                  className="p-2.5 rounded-lg hover:bg-black/5 transition-colors"
+                >
+                  <UserCog size={20} className="text-[var(--text-muted)]" />
+                </Link>
+              </>
+            )}
           </div>
         )}
-                {isAuthenticated && !isPlatformRole && (
+        {isAuthenticated && !hasCenteredIcons && (
           <Link
-            href={profile?.role === "facilitator" ? "/facilitator/dashboard" : "/dashboard"}
+            href="/dashboard"
             className="p-2 rounded-lg hover:bg-black/5 transition-colors"
           >
             <LayoutDashboard size={18} className="text-[var(--text-muted)]" />
