@@ -164,32 +164,6 @@ export default function FacilitatorDashboard() {
             </ul>
           )}
         </section>
-
-        <section className="grid grid-rows-2 gap-4 animate-fade-up stagger-2">
-          <div className="paper p-5">
-            <h2 className="font-display font-semibold mb-3" style={{ color: "var(--text)" }}>
-              Announcements
-            </h2>
-            <ul className="space-y-2 text-sm text-gray-600">
-              <li>QCTO audit visit scheduled for 10 September, prepare learner PoEs.</li>
-              <li>Upcoming assessor and moderator allocation, confirm your availability.</li>
-              <li>Unit Standard assessments due for moderation this month.</li>
-              <li>New compliance checklist uploaded to your facilitator portal.</li>
-            </ul>
-          </div>
-
-          <div className="paper p-5">
-            <h2 className="font-display font-semibold mb-3" style={{ color: "var(--text)" }}>
-              My Schedule
-            </h2>
-            <ul className="space-y-2 text-sm text-gray-600 font-mono">
-              <li>09:00–10:00 · Knowledge Module</li>
-              <li>10:15–11:15 · Practical Evidence Upload</li>
-              <li>11:30–12:30 · Summative Assessment</li>
-              <li>13:00–14:00 · MS Teams Session</li>
-            </ul>
-          </div>
-        </section>
       </div>
 
       {addModalOpen && (

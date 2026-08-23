@@ -9,13 +9,75 @@ import { createClient } from "../lib/supabase/client";
 import { useAuth } from "./context/AuthContext";
 
 export default function Home() {
-  const { institution } = useAuth();
+  const { institution, user, role } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [mode, setMode] = useState("signin");
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [sessionUser, setSessionUser] = useState(null);
+  const [announcements, setAnnouncements] = useState([]);
+  const [upcomingSessions, setUpcomingSessions] = useState([]);
+  const [newAnnouncement, setNewAnnouncement] = useState({ title: "", body: "" });
+  const [postingAnnouncement, setPostingAnnouncement] = useState(false);
 
   const supabase = createClient();
+
+  const fetchHomeData = async () => {
+    if (!institution?.id || !user) return;
+
+    const { data: announcementsData } = await supabase
+      .from("announcements")
+      .select("*, profiles ( first_name, surname )")
+      .eq("institution_id", institution.id)
+      .order("created_at", { ascending: false })
+      .limit(5);
+    setAnnouncements(announcementsData || []);
+
+    if (role === "facilitator") {
+      const { data: weeksData } = await supabase
+        .from("unit_weeks")
+        .select("unit_standard_title, session_datetime, programmes ( name, facilitator_id )")
+        .not("session_datetime", "is", null)
+        .gte("session_datetime", new Date().toISOString())
+        .order("session_datetime", { ascending: true })
+        .limit(5);
+      setUpcomingSessions((weeksData || []).filter((w) => w.programmes?.facilitator_id === user.id));
+    } else if (role === "learner") {
+      const { data: enrollments } = await supabase.from("enrollments").select("programme_id").eq("user_id", user.id);
+      const programmeIds = (enrollments || []).map((e) => e.programme_id);
+      if (programmeIds.length > 0) {
+        const { data: weeksData } = await supabase
+          .from("unit_weeks")
+          .select("unit_standard_title, session_datetime, programmes ( name )")
+          .in("programme_id", programmeIds)
+          .not("session_datetime", "is", null)
+          .gte("session_datetime", new Date().toISOString())
+          .order("session_datetime", { ascending: true })
+          .limit(5);
+        setUpcomingSessions(weeksData || []);
+      }
+    }
+  };
+
+  useEffect(() => {
+    fetchHomeData();
+  }, [institution?.id, user?.id, role]);
+
+  const postAnnouncement = async () => {
+    if (!newAnnouncement.title.trim()) return;
+    setPostingAnnouncement(true);
+    const { error } = await supabase.from("announcements").insert({
+      institution_id: institution.id,
+      author_id: user.id,
+      title: newAnnouncement.title,
+      body: newAnnouncement.body,
+    });
+    if (error) alert(error.message);
+    else {
+      setNewAnnouncement({ title: "", body: "" });
+      fetchHomeData();
+    }
+    setPostingAnnouncement(false);
+  };
 
   const openModal = (selectedMode) => {
     setMode(selectedMode);
@@ -108,45 +170,82 @@ export default function Home() {
         <AuthModal isOpen={isOpen} onClose={() => setIsOpen(false)} mode={mode} />
       </section>
 
-      {/* Qualifications + Testimonial */}
-      <section className="grid md:grid-cols-2 gap-6 max-w-5xl mx-auto mb-12">
-        <div className="paper p-6 card-lift animate-fade-up stagger-1">
-          <h2 className="font-display text-xl font-semibold mb-4" style={{ color: "var(--text)" }}>
-            Top Qualifications This Year
-          </h2>
-          <ul className="space-y-3">
-            {[
-              "NQF Level 4: Municipal Financial Management (MFMP)",
-              "NQF Level 5: Insurance",
-              "NQF Level 6: Risk Management",
-            ].map((course, idx) => (
-              <li
-                key={idx}
-                className="p-4 rounded-xl text-sm font-medium transition-colors hover:bg-gray-50 cursor-pointer"
-                style={{ background: "var(--paper-muted)", color: "var(--text)" }}
-              >
-                {course}
-              </li>
-            ))}
-          </ul>
-        </div>
+            {sessionUser ? (
+        <section className="grid md:grid-cols-2 gap-6 max-w-5xl mx-auto mb-12">
+          <div className="paper p-6 animate-fade-up stagger-1">
+            <h2 className="font-display text-xl font-semibold mb-4" style={{ color: "var(--text)" }}>
+              Announcements
+            </h2>
+            {(role === "institution_admin" || role === "superadmin") && (
+              <div className="mb-4 p-3 rounded-xl space-y-2" style={{ background: "var(--paper-muted)" }}>
+                <input
+                  type="text" placeholder="Announcement title" value={newAnnouncement.title}
+                  onChange={(e) => setNewAnnouncement((p) => ({ ...p, title: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-lg border text-sm" style={{ borderColor: "var(--border-soft)" }}
+                />
+                <textarea
+                  placeholder="Details (optional)" value={newAnnouncement.body} rows={2}
+                  onChange={(e) => setNewAnnouncement((p) => ({ ...p, body: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-lg border text-sm" style={{ borderColor: "var(--border-soft)" }}
+                />
+                <button onClick={postAnnouncement} disabled={postingAnnouncement} className="text-xs font-medium px-3 py-1.5 rounded-lg disabled:opacity-50" style={{ background: "var(--brand-color)", color: "white" }}>
+                  {postingAnnouncement ? "Posting..." : "Post Announcement"}
+                </button>
+              </div>
+            )}
+            {announcements.length === 0 ? (
+              <p className="text-sm text-gray-400">No announcements yet.</p>
+            ) : (
+              <ul className="space-y-3">
+                {announcements.map((a) => (
+                  <li key={a.id} className="p-3 rounded-xl text-sm" style={{ background: "var(--paper-muted)" }}>
+                    <p className="font-medium" style={{ color: "var(--text)" }}>{a.title}</p>
+                    {a.body && <p className="text-gray-600 mt-1">{a.body}</p>}
+                    <p className="text-xs text-gray-400 mt-1 font-mono">{new Date(a.created_at).toLocaleDateString()}</p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
 
-        <div className="paper p-6 card-lift flex flex-col justify-center items-center text-center animate-fade-up stagger-2">
-          <h2 className="font-display text-xl font-semibold mb-6" style={{ color: "var(--text)" }}>
-            What Our Clients Say
-          </h2>
-          <img
-            src="/pg.jpg"
-            alt="Client"
-            className="w-16 h-16 rounded-full object-cover mb-4"
-            style={{ border: "2px solid var(--seal-gold)" }}
-          />
-          <p className="text-base font-medium mb-2" style={{ color: "var(--text)" }}>
-            "Fachs LMS transformed our learning process!"
-          </p>
-          <span className="text-sm text-[var(--text-muted)]">— Sphiwe, Tshwane Municipality</span>
-        </div>
-      </section>
+          <div className="paper p-6 animate-fade-up stagger-2">
+            <h2 className="font-display text-xl font-semibold mb-4" style={{ color: "var(--text)" }}>
+              {role === "facilitator" ? "My Schedule" : "Upcoming Sessions"}
+            </h2>
+            {upcomingSessions.length === 0 ? (
+              <p className="text-sm text-gray-400">Nothing scheduled right now.</p>
+            ) : (
+              <ul className="space-y-3">
+                {upcomingSessions.map((s, i) => (
+                  <li key={i} className="p-3 rounded-xl text-sm" style={{ background: "var(--paper-muted)" }}>
+                    <p className="font-medium" style={{ color: "var(--text)" }}>{s.programmes?.name}</p>
+                    <p className="text-gray-600">{s.unit_standard_title}</p>
+                    <p className="text-xs text-gray-400 mt-1 font-mono">{new Date(s.session_datetime).toLocaleString()}</p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </section>
+      ) : (
+        <section className="grid md:grid-cols-2 gap-6 max-w-5xl mx-auto mb-12">
+          <div className="paper p-6 card-lift flex flex-col justify-center items-center text-center animate-fade-up stagger-2">
+            <h2 className="font-display text-xl font-semibold mb-6" style={{ color: "var(--text)" }}>
+              What Our Clients Say
+            </h2>
+            <img
+              src="/pg.jpg"
+              alt="Client"
+              className="w-16 h-16 rounded-full object-cover mb-4"
+              style={{ border: "2px solid var(--seal-gold)" }}
+            />
+            <p className="text-base font-medium mb-2" style={{ color: "var(--text)" }}>
+              "Fachs LMS transformed our learning process!"
+            </p>
+            <span className="text-sm text-[var(--text-muted)]">— Sphiwe, Tshwane Municipality</span>
+          </div>
+        </section>
+      )}
 
       {/* Stats */}
       <section className="max-w-5xl mx-auto mb-16">
