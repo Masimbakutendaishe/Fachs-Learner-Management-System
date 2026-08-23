@@ -7,6 +7,22 @@ import FacilitatorLoginModal from "./FacilitatorLoginModal";
 import AuthModal from "./AuthModal";
 import { useAuth } from "../pages/context/AuthContext";
 
+function NavIconButton({ href, label, icon }) {
+  return (
+    <div className="group relative">
+      <Link href={href} className="navbar-icon-btn p-2.5 rounded-lg transition-colors block">
+        {icon}
+      </Link>
+      <span
+        className="navbar-icon-shiny absolute left-1/2 -translate-x-1/2 top-full mt-1.5 opacity-0 group-hover:opacity-100 transition-opacity text-xs font-semibold px-2.5 py-1 rounded-lg shadow-lg whitespace-nowrap pointer-events-none"
+        style={{ background: "white" }}
+      >
+        {label}
+      </span>
+    </div>
+  );
+}
+
 export default function MobileNavbar() {
   const { user, profile, institution, isAuthenticated, signOut } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
@@ -99,33 +115,25 @@ export default function MobileNavbar() {
       </div>
 
       <div className="hidden md:flex items-center gap-3">
-                     {isAuthenticated && hasCenteredIcons && (
+                             {isAuthenticated && hasCenteredIcons && (
           <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2">
             {profile?.role === "facilitator" ? (
               <>
-                <Link href="/" title="Home" className="p-2.5 rounded-lg hover:bg-black/5 transition-colors">
-                  <Home size={20} className="text-[var(--text-muted)]" />
-                </Link>
-                <Link href="/facilitator/dashboard" title="Dashboard" className="p-2.5 rounded-lg hover:bg-black/5 transition-colors">
-                  <LayoutDashboard size={20} className="text-[var(--text-muted)]" />
-                </Link>
+                <NavIconButton href="/" label="Home" icon={<Home size={20} />} />
+                <NavIconButton href="/facilitator/dashboard" label="Qualifications" icon={<LayoutDashboard size={20} />} />
               </>
             ) : (
               <>
-                <Link
+                <NavIconButton
                   href={profile?.role === "superadmin" ? "/superadmin" : "/admin/institution-settings"}
-                  title="Dashboard"
-                  className="p-2.5 rounded-lg hover:bg-black/5 transition-colors"
-                >
-                  <LayoutDashboard size={20} className="text-[var(--text-muted)]" />
-                </Link>
-                <Link
+                  label="Dashboard"
+                  icon={<LayoutDashboard size={20} />}
+                />
+                <NavIconButton
                   href={profile?.role === "superadmin" ? "/superadmin/users" : "/admin/users"}
-                  title="Manage Users"
-                  className="p-2.5 rounded-lg hover:bg-black/5 transition-colors"
-                >
-                  <UserCog size={20} className="text-[var(--text-muted)]" />
-                </Link>
+                  label="Manage Users"
+                  icon={<UserCog size={20} />}
+                />
               </>
             )}
           </div>

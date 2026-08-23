@@ -26,13 +26,23 @@ export default function Home() {
   const fetchHomeData = async () => {
     if (!institution?.id || !user) return;
 
-    const { data: announcementsData } = await supabase
+    let announcementsQuery = supabase
       .from("announcements")
       .select("*, profiles ( first_name, surname )")
       .eq("institution_id", institution.id)
       .order("created_at", { ascending: false })
-      .limit(5);
-    setAnnouncements(announcementsData || []);
+      .limit(10);
+
+    if (role === "learner") {
+      const { data: myEnrollments } = await supabase.from("enrollments").select("programme_id").eq("user_id", user.id);
+      const myProgrammeIds = (myEnrollments || []).map((e) => e.programme_id);
+      announcementsQuery = announcementsQuery.or(
+        `audience.eq.everyone${myProgrammeIds.length ? `,and(audience.eq.my_learners,programme_id.in.(${myProgrammeIds.join(",")}))` : ""}`
+      );
+    }
+
+    const { data: announcementsData } = await announcementsQuery;
+    setAnnouncements((announcementsData || []).slice(0, 5));
 
     if (role === "facilitator") {
       const { data: weeksData } = await supabase
@@ -78,15 +88,20 @@ export default function Home() {
   const postAnnouncement = async () => {
     if (!newAnnouncement.title.trim()) return;
     setPostingAnnouncement(true);
+    const { data: myProgrammes } = role === "facilitator"
+      ? await supabase.from("programmes").select("id").eq("facilitator_id", user.id)
+      : { data: null };
     const { error } = await supabase.from("announcements").insert({
       institution_id: institution.id,
       author_id: user.id,
       title: newAnnouncement.title,
       body: newAnnouncement.body,
+      audience: newAnnouncement.audience || "everyone",
+      programme_id: newAnnouncement.audience === "my_learners" ? myProgrammes?.[0]?.id : null,
     });
     if (error) alert(error.message);
     else {
-      setNewAnnouncement({ title: "", body: "" });
+      setNewAnnouncement({ title: "", body: "", audience: "everyone" });
       fetchHomeData();
     }
     setPostingAnnouncement(false);
@@ -203,18 +218,28 @@ export default function Home() {
             <h2 className="font-display text-xl font-semibold mb-4" style={{ color: "var(--text)" }}>
               Announcements
             </h2>
-            {(role === "institution_admin" || role === "superadmin") && (
+                       {(role === "institution_admin" || role === "superadmin" || role === "facilitator") && (
               <div className="mb-4 p-3 rounded-xl space-y-2" style={{ background: "var(--paper-muted)" }}>
                 <input
                   type="text" placeholder="Announcement title" value={newAnnouncement.title}
                   onChange={(e) => setNewAnnouncement((p) => ({ ...p, title: e.target.value }))}
                   className="w-full px-3 py-2 rounded-lg border text-sm" style={{ borderColor: "var(--border-soft)" }}
                 />
-                <textarea
+                               <textarea
                   placeholder="Details (optional)" value={newAnnouncement.body} rows={2}
                   onChange={(e) => setNewAnnouncement((p) => ({ ...p, body: e.target.value }))}
                   className="w-full px-3 py-2 rounded-lg border text-sm" style={{ borderColor: "var(--border-soft)" }}
                 />
+                {role === "facilitator" && (
+                  <select
+                    value={newAnnouncement.audience || "everyone"}
+                    onChange={(e) => setNewAnnouncement((p) => ({ ...p, audience: e.target.value }))}
+                    className="w-full px-3 py-2 rounded-lg border text-sm" style={{ borderColor: "var(--border-soft)" }}
+                  >
+                    <option value="everyone">Everyone in {institution?.name || "the institution"}</option>
+                    <option value="my_learners">Just my learners</option>
+                  </select>
+                )}
                 <button onClick={postAnnouncement} disabled={postingAnnouncement} className="text-xs font-medium px-3 py-1.5 rounded-lg disabled:opacity-50" style={{ background: "var(--brand-color)", color: "white" }}>
                   {postingAnnouncement ? "Posting..." : "Post Announcement"}
                 </button>
