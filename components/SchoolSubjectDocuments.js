@@ -4,7 +4,13 @@ import { createClient } from "../lib/supabase/client";
 
 export default function SchoolSubjectDocuments({ programme, onUpdated }) {
   const supabase = createClient();
-  const [syllabusUrl, setSyllabusUrl] = useState(programme.curriculum_document_url || "");
+    useEffect(() => {
+    setSyllabusUrl(programme.curriculum_document_url || "");
+    setTextbooks(programme.textbooks || []);
+    setQuestions(programme.activity_book_questions || []);
+  }, [programme.id]);
+  const [syllabusTopics, setSyllabusTopics] = useState(programme.syllabus_topics || []);
+  const [newTopic, setNewTopic] = useState({ week_label: "", topic: "", description: "" });
   const [textbooks, setTextbooks] = useState(programme.textbooks || []);
   const [questions, setQuestions] = useState(programme.activity_book_questions || []);
   const [uploadingSyllabus, setUploadingSyllabus] = useState(false);
@@ -18,11 +24,19 @@ export default function SchoolSubjectDocuments({ programme, onUpdated }) {
   const [newQ, setNewQ] = useState({ text: "", type: "free", marks: "", options: [] });
   const [newOption, setNewOption] = useState("");
 
-  useEffect(() => {
+    useEffect(() => {
     setSyllabusUrl(programme.curriculum_document_url || "");
+    setSyllabusTopics(programme.syllabus_topics || []);
     setTextbooks(programme.textbooks || []);
     setQuestions(programme.activity_book_questions || []);
   }, [programme.id]);
+
+  const addTopic = () => {
+    if (!newTopic.topic.trim()) return;
+    setSyllabusTopics((prev) => [...prev, newTopic]);
+    setNewTopic({ week_label: "", topic: "", description: "" });
+  };
+  const removeTopic = (i) => setSyllabusTopics((prev) => prev.filter((_, idx) => idx !== i));
 
   const uploadFile = async (file, prefix) => {
     const path = `${prefix}/${programme.id}_${Date.now()}_${file.name}`;
@@ -127,10 +141,11 @@ export default function SchoolSubjectDocuments({ programme, onUpdated }) {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const { error } = await supabase
+            const { error } = await supabase
         .from("programmes")
         .update({
           curriculum_document_url: syllabusUrl,
+          syllabus_topics: syllabusTopics,
           textbooks,
           activity_book_questions: questions,
         })
@@ -155,12 +170,36 @@ export default function SchoolSubjectDocuments({ programme, onUpdated }) {
         <div className="flex items-center gap-3">
           <input type="file" onChange={(e) => e.target.files[0] && handleSyllabusUpload(e.target.files[0])} className="text-sm text-gray-500" />
           {uploadingSyllabus && <span className="text-xs text-[var(--seal-gold)] font-mono">Uploading...</span>}
-          {syllabusUrl && !uploadingSyllabus && (
+                    {syllabusUrl && !uploadingSyllabus && (
             <>
               <a href={syllabusUrl} target="_blank" rel="noopener noreferrer" className="text-xs" style={{ color: "var(--brand-color)" }}>View current file</a>
               <button onClick={() => setSyllabusUrl("")} className="text-xs text-red-500 hover:underline">Remove</button>
             </>
           )}
+        </div>
+
+        <div className="pt-3 border-t space-y-2" style={{ borderColor: "var(--border-soft)" }}>
+          <p className="text-xs text-[var(--text-muted)]">Term Plan (topics mapped to weeks)</p>
+          {syllabusTopics.length > 0 && (
+            <ul className="space-y-1">
+              {syllabusTopics.map((t, i) => (
+                <li key={i} className="flex items-start justify-between gap-2 text-sm p-2 rounded-lg" style={{ background: "var(--paper-muted)" }}>
+                  <div>
+                    <span className="font-medium" style={{ color: "var(--text)" }}>{t.week_label || `Topic ${i + 1}`}: </span>
+                    <span className="text-gray-700">{t.topic}</span>
+                    {t.description && <p className="text-xs text-gray-500 mt-0.5">{t.description}</p>}
+                  </div>
+                  <button onClick={() => removeTopic(i)} className="text-xs text-red-500 hover:underline flex-shrink-0">Remove</button>
+                </li>
+              ))}
+            </ul>
+          )}
+          <div className="flex gap-2">
+            <input type="text" placeholder="Week (e.g. Week 3)" value={newTopic.week_label} onChange={(e) => setNewTopic((p) => ({ ...p, week_label: e.target.value }))} className={`${inputClass} w-32`} style={{ borderColor: "var(--border-soft)" }} />
+            <input type="text" placeholder="Topic" value={newTopic.topic} onChange={(e) => setNewTopic((p) => ({ ...p, topic: e.target.value }))} className={`${inputClass} flex-1`} style={{ borderColor: "var(--border-soft)" }} />
+          </div>
+          <input type="text" placeholder="Description (optional)" value={newTopic.description} onChange={(e) => setNewTopic((p) => ({ ...p, description: e.target.value }))} className={inputClass} style={{ borderColor: "var(--border-soft)" }} />
+          <button onClick={addTopic} className="px-3 py-2 rounded-lg text-sm font-medium" style={{ border: "1px solid var(--border-soft)", color: "var(--text)" }}>Add Topic</button>
         </div>
       </div>
 

@@ -420,7 +420,7 @@ export default function FacilitatorCoursePage() {
       )}
 
       {editingWeek && (
-        <WeekModal week={editingWeek} onClose={() => setEditingWeek(null)} onSaved={handleWeekSaved} />
+                <WeekModal week={editingWeek} onClose={() => setEditingWeek(null)} onSaved={handleWeekSaved} isSchool={features.hasTimetable} />
       )}
 
       {generatingOpen && (
@@ -903,7 +903,7 @@ function SubmissionRow({ sub, supabase, onGraded }) {
   );
 }
 
-function WeekModal({ week, onClose, onSaved }) {
+function WeekModal({ week, onClose, onSaved, isSchool }) {
   const supabase = createClient();
   const readOnly = !!week.readOnly;
   const toLocalInput = (v) => {
@@ -921,6 +921,7 @@ function WeekModal({ week, onClose, onSaved }) {
     teams_session_link: week.teams_session_link || "",
     daily_room_url: week.daily_room_url || "",
     session_datetime: toLocalInput(week.session_datetime),
+    lesson_plan: week.lesson_plan || "",
     video_url: week.video_url || "",
     learner_guide_url: week.learner_guide_url || "",
     learner_workbook_url: week.learner_workbook_url || "",
@@ -948,16 +949,16 @@ function WeekModal({ week, onClose, onSaved }) {
   const [generatingFor, setGeneratingFor] = useState(null);
   const [step, setStep] = useState(0);
 
-  const STEPS = [
+    const STEPS = [
     { key: "basics", label: "Basics" },
     { key: "session", label: "Live Session" },
+    { key: "lesson_plan", label: isSchool ? "Lesson Plan" : "Notes" },
     { key: "intro", label: "Intro & Links" },
     { key: "materials", label: "Materials" },
     { key: "chapters", label: "Guide Chapters" },
     { key: "resources", label: "Resources" },
     { key: "questions", label: "Questions" },
   ];
-
   const handleFieldChange = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
 
     const handleCreateDailyRoom = async () => {
@@ -1281,7 +1282,20 @@ function WeekModal({ week, onClose, onSaved }) {
               </div>
             )}
 
-            {step === 2 && (
+                        {step === 2 && (
+              <div>
+                <label className="block text-xs text-[var(--text-muted)] mb-1">
+                  {isSchool ? "Lesson Plan (facilitator-only, not shown to learners)" : "Planning Notes (facilitator-only, not shown to learners)"}
+                </label>
+                <textarea
+                  value={form.lesson_plan} onChange={(e) => handleFieldChange("lesson_plan", e.target.value)}
+                  rows={6} disabled={readOnly} className={inputClass} style={{ borderColor: "var(--border-soft)" }}
+                  placeholder={isSchool ? "Objectives, materials needed, activity outline, timing..." : "Private planning notes for this week..."}
+                />
+              </div>
+            )}
+
+            {step === 3 && (
               <>
                 <div>
                   <label className="block text-xs text-[var(--text-muted)] mb-1">Facilitator's Intro</label>
@@ -1298,7 +1312,7 @@ function WeekModal({ week, onClose, onSaved }) {
               </>
             )}
 
-            {step === 3 && (
+            {step === 4 && (
               <>
                 {[
                   { key: "learner_guide_url", label: "Learner Guide" },
@@ -1328,7 +1342,7 @@ function WeekModal({ week, onClose, onSaved }) {
               </>
             )}
 
-            {step === 4 && (
+          {step === 5 && (
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="block text-xs text-[var(--text-muted)]">Learner Guide Chapters</label>
@@ -1362,7 +1376,7 @@ function WeekModal({ week, onClose, onSaved }) {
               </div>
             )}
 
-            {step === 5 && (
+          {step === 6 && (
               <>
                 <div>
                   <label className="block text-xs text-[var(--text-muted)] mb-1">Voice Recordings</label>
@@ -1438,7 +1452,7 @@ function WeekModal({ week, onClose, onSaved }) {
               </>
             )}
 
-            {step === 6 && (
+          {step === 7 && (
               <>
                 {["workbook", "knowledge", "summative", "practical"].map((activityKey) => (
                   <div key={activityKey} className="pt-2 border-t first:border-0 first:pt-0" style={{ borderColor: "var(--border-soft)" }}>

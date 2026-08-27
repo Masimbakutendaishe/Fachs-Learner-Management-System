@@ -781,7 +781,7 @@ const SchoolLibraryPanel = ({ enrollment }) => {
   const fetchAll = async () => {
     const { data: prog } = await supabase
       .from("programmes")
-      .select("name, curriculum_document_url, textbooks, activity_book_questions")
+      .select("name, curriculum_document_url, syllabus_topics, textbooks, activity_book_questions")
       .eq("id", enrollment.programme_id)
       .single();
     setProgramme(prog);
@@ -801,12 +801,22 @@ const SchoolLibraryPanel = ({ enrollment }) => {
 
   return (
     <div className="space-y-4">
-      <div className="paper p-6">
+          <div className="paper p-6">
         <h2 className="font-display text-xl font-semibold mb-2" style={{ color: "var(--text)" }}>Syllabus</h2>
         {programme?.curriculum_document_url ? (
           <LinkButton href={programme.curriculum_document_url}>Download Syllabus</LinkButton>
         ) : (
-          <p className="text-sm text-gray-400">Not uploaded yet.</p>
+          <p className="text-sm text-gray-400">No document uploaded yet.</p>
+        )}
+        {programme?.syllabus_topics?.length > 0 && (
+          <div className="mt-4 space-y-2">
+            {programme.syllabus_topics.map((t, i) => (
+              <div key={i} className="p-3 rounded-lg text-sm" style={{ background: "var(--paper-muted)" }}>
+                <p className="font-medium" style={{ color: "var(--text)" }}>{t.week_label || `Topic ${i + 1}`}: {t.topic}</p>
+                {t.description && <p className="text-xs text-gray-500 mt-1">{t.description}</p>}
+              </div>
+            ))}
+          </div>
         )}
       </div>
 
