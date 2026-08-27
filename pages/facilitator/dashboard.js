@@ -92,27 +92,16 @@ export default function FacilitatorDashboard() {
             <h2 className="font-display text-lg font-semibold" style={{ color: "var(--text)" }}>
               {features.hasTimetable ? "My Classes" : "Qualifications Facilitating"}
             </h2>
-            <div className="flex items-center gap-4">
-              {features.hasQctoFields && (
-                <button
-                  onClick={() => setAddModalOpen(true)}
-                  className="flex items-center gap-1.5 text-sm font-medium transition-opacity hover:opacity-80"
-                  style={{ color: "var(--brand-color)" }}
-                >
-                  <PlusCircle className="w-4 h-4" /> Add Qualification
-                </button>
-              )}
+                      <div className="flex items-center gap-4">
+              <button
+                onClick={() => setAddModalOpen(true)}
+                className="flex items-center gap-1.5 text-sm font-medium transition-opacity hover:opacity-80"
+                style={{ color: "var(--brand-color)" }}
+              >
+                <PlusCircle className="w-4 h-4" /> {features.hasTimetable ? "Add Class" : "Add Qualification"}
+              </button>
             </div>
           </div>
-
-          {features.hasTimetable && (
-            <div className="mb-4 p-4 rounded-xl paper flex items-center gap-3">
-              <Calendar className="w-5 h-5 flex-shrink-0" style={{ color: "var(--brand-color)" }} />
-              <span className="text-sm text-gray-600">
-                Timetable and class roster management is coming here for school accounts.
-              </span>
-            </div>
-          )}
 
           {facilitations.length === 0 ? (
             <div className="paper p-8 text-center text-gray-500 text-sm">
@@ -164,10 +153,11 @@ export default function FacilitatorDashboard() {
           )}
         </section>
 
-      {addModalOpen && (
+            {addModalOpen && (
         <AddQualificationModal
           facilitatorId={user.id}
           institutionId={profile?.institution_id}
+          isSchool={features.hasTimetable}
           onClose={() => setAddModalOpen(false)}
           onCreated={handleProgrammeCreated}
         />
@@ -176,7 +166,7 @@ export default function FacilitatorDashboard() {
   );
 }
 
-function AddQualificationModal({ facilitatorId, institutionId, onClose, onCreated }) {
+function AddQualificationModal({ facilitatorId, institutionId, onClose, onCreated, isSchool }) {
   const supabase = createClient();
   const [name, setName] = useState("");
   const [nqfLevel, setNqfLevel] = useState("");
@@ -240,8 +230,8 @@ function AddQualificationModal({ facilitatorId, institutionId, onClose, onCreate
             price: Number(price) || 0,
             description,
             image_url: imageUrl,
-            qualification_type: qualificationType,
-            curriculum_document_url: curriculumUrl,
+            qualification_type: isSchool ? null : qualificationType,
+            curriculum_document_url: isSchool ? null : curriculumUrl,
             facilitator_id: facilitatorId,
             institution_id: institutionId,
           }])
@@ -251,16 +241,18 @@ function AddQualificationModal({ facilitatorId, institutionId, onClose, onCreate
         if (insertErr) throw insertErr;
         programme = newProg;
 
-        await supabase.from("qualification_modules").insert(
-          ["knowledge", "practical", "workplace"].map((module_type) => ({
-            programme_id: programme.id,
-            institution_id: institutionId,
-            module_type,
-          }))
-        );
+        if (!isSchool) {
+          await supabase.from("qualification_modules").insert(
+            ["knowledge", "practical", "workplace"].map((module_type) => ({
+              programme_id: programme.id,
+              institution_id: institutionId,
+              module_type,
+            }))
+          );
 
-        if (qualificationType === "skills_programme") {
-          await supabase.from("qualification_fisa").insert({ programme_id: programme.id, institution_id: institutionId });
+          if (qualificationType === "skills_programme") {
+            await supabase.from("qualification_fisa").insert({ programme_id: programme.id, institution_id: institutionId });
+          }
         }
       }
 
@@ -290,23 +282,25 @@ function AddQualificationModal({ facilitatorId, institutionId, onClose, onCreate
           </h2>
 
           <form onSubmit={handleSubmit} className="space-y-3">
-            <input
-              type="text" placeholder="Qualification name" value={name}
+                        <input
+              type="text" placeholder={isSchool ? "Subject or class name" : "Qualification name"} value={name}
               onChange={(e) => setName(e.target.value)} required
               className={inputClass} style={{ borderColor: "var(--border-soft)", color: "var(--text)" }}
             />
-                        <div className="grid grid-cols-2 gap-3">
-              <input
-                type="number" placeholder="NQF Level" value={nqfLevel}
-                onChange={(e) => setNqfLevel(e.target.value)} required
-                className={inputClass} style={{ borderColor: "var(--border-soft)", color: "var(--text)" }}
-              />
-              <input
-                type="number" placeholder="Total credits" value={credits}
-                onChange={(e) => setCredits(e.target.value)} required
-                className={inputClass} style={{ borderColor: "var(--border-soft)", color: "var(--text)" }}
-              />
-            </div>
+            {!isSchool && (
+              <div className="grid grid-cols-2 gap-3">
+                <input
+                  type="number" placeholder="NQF Level" value={nqfLevel}
+                  onChange={(e) => setNqfLevel(e.target.value)} required
+                  className={inputClass} style={{ borderColor: "var(--border-soft)", color: "var(--text)" }}
+                />
+                <input
+                  type="number" placeholder="Total credits" value={credits}
+                  onChange={(e) => setCredits(e.target.value)} required
+                  className={inputClass} style={{ borderColor: "var(--border-soft)", color: "var(--text)" }}
+                />
+              </div>
+            )}
             <input
               type="number" step="0.01" placeholder="Price (e.g. 499.00)" value={price}
               onChange={(e) => setPrice(e.target.value)} required
@@ -317,24 +311,28 @@ function AddQualificationModal({ facilitatorId, institutionId, onClose, onCreate
               onChange={(e) => setDescription(e.target.value)} rows={3}
               className={inputClass} style={{ borderColor: "var(--border-soft)", color: "var(--text)" }}
             />
-                       <div>
-              <label className="block text-xs text-[var(--text-muted)] mb-1">Qualification Type</label>
-              <select value={qualificationType} onChange={(e) => setQualificationType(e.target.value)} className={inputClass} style={{ borderColor: "var(--border-soft)", color: "var(--text)" }}>
-                <option value="full">Full Qualification</option>
-                <option value="part">Part Qualification</option>
-                <option value="skills_programme">Skills Programme</option>
-                <option value="masterclass">Masterclass</option>
-              </select>
-              <p className="text-xs text-gray-500 mt-1">
-                {qualificationType === "skills_programme"
-                  ? "Skills Programmes get a Final Integrated Summative Assessment (FISA)."
-                  : "Full and Part Qualifications are checked against an ISA (Internal Assessment Specification)."}
-              </p>
-            </div>
-            <div>
-              <label className="block text-xs text-[var(--text-muted)] mb-1">Curriculum Document</label>
-              <input type="file" onChange={(e) => setCurriculumFile(e.target.files[0])} className="text-sm text-gray-600" />
-            </div>
+            {!isSchool && (
+              <>
+                <div>
+                  <label className="block text-xs text-[var(--text-muted)] mb-1">Qualification Type</label>
+                  <select value={qualificationType} onChange={(e) => setQualificationType(e.target.value)} className={inputClass} style={{ borderColor: "var(--border-soft)", color: "var(--text)" }}>
+                    <option value="full">Full Qualification</option>
+                    <option value="part">Part Qualification</option>
+                    <option value="skills_programme">Skills Programme</option>
+                    <option value="masterclass">Masterclass</option>
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {qualificationType === "skills_programme"
+                      ? "Skills Programmes get a Final Integrated Summative Assessment (FISA)."
+                      : "Full and Part Qualifications are checked against an ISA (Internal Assessment Specification)."}
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-xs text-[var(--text-muted)] mb-1">Curriculum Document</label>
+                  <input type="file" onChange={(e) => setCurriculumFile(e.target.files[0])} className="text-sm text-gray-600" />
+                </div>
+              </>
+            )}
             <div>
               <label className="block text-xs text-[var(--text-muted)] mb-1">Qualification Image (optional)</label>
               <input
