@@ -767,6 +767,195 @@ const ModuleQuestionAnswer = ({ module, enrollment, existingSubmission, onSubmit
   );
 };
 
+const SchoolLibraryPanel = ({ enrollment }) => {
+  const supabase = createClient();
+  const [programme, setProgramme] = useState(null);
+  const [existingSubmission, setExistingSubmission] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [openChapters, setOpenChapters] = useState(null);
+
+  useEffect(() => {
+    fetchAll();
+  }, []);
+
+  const fetchAll = async () => {
+    const { data: prog } = await supabase
+      .from("programmes")
+      .select("name, curriculum_document_url, textbooks, activity_book_questions")
+      .eq("id", enrollment.programme_id)
+      .single();
+    setProgramme(prog);
+
+    const { data: sub } = await supabase
+      .from("submissions")
+      .select("*")
+      .eq("user_id", enrollment.user_id)
+      .eq("programme_id", enrollment.programme_id)
+      .eq("activity_type", "activity_book")
+      .maybeSingle();
+    setExistingSubmission(sub);
+    setLoading(false);
+  };
+
+  if (loading) return <p className="text-sm font-mono text-[var(--text-muted)]">Loading...</p>;
+
+  return (
+    <div className="space-y-4">
+      <div className="paper p-6">
+        <h2 className="font-display text-xl font-semibold mb-2" style={{ color: "var(--text)" }}>Syllabus</h2>
+        {programme?.curriculum_document_url ? (
+          <LinkButton href={programme.curriculum_document_url}>Download Syllabus</LinkButton>
+        ) : (
+          <p className="text-sm text-gray-400">Not uploaded yet.</p>
+        )}
+      </div>
+
+      {(programme?.textbooks || []).map((book) => (
+        <div key={book.id} className="paper p-6">
+          <h2 className="font-display text-lg font-semibold mb-1" style={{ color: "var(--text)" }}>{book.title}</h2>
+          <p className="text-xs text-gray-500 mb-3">
+            {[book.author, book.edition, book.published_year].filter(Boolean).join(" - ") || "No additional details"}
+          </p>
+          {book.file_url ? (
+            <LinkButton href={book.file_url}>Download</LinkButton>
+          ) : (
+            <p className="text-sm text-gray-400">No file available.</p>
+          )}
+          {book.chapters?.length > 0 && (
+            <button
+              onClick={() => setOpenChapters(openChapters === book.id ? null : book.id)}
+              className="block mt-3 text-sm font-medium"
+              style={{ color: "var(--brand-color)" }}
+            >
+              {openChapters === book.id ? "Hide chapters" : `View ${book.chapters.length} chapters`}
+            </button>
+          )}
+          {openChapters === book.id && (
+            <div className="mt-3 space-y-2">
+              {book.chapters.map((c, i) => (
+                <details key={i} className="p-3 rounded-lg" style={{ background: "var(--paper-muted)" }}>
+                  <summary className="text-sm font-medium cursor-pointer" style={{ color: "var(--text)" }}>{i + 1}. {c.title}</summary>
+                  <p className="text-sm text-gray-600 mt-2 whitespace-pre-line">{c.content}</p>
+                </details>
+              ))}
+            </div>
+          )}
+        </div>
+      ))}
+
+      <div className="paper p-6">
+        <h2 className="font-display text-lg font-semibold mb-2" style={{ color: "var(--text)" }}>Activity Book</h2>
+        <ActivityBookAnswer
+          questions={programme?.activity_book_questions || []}
+          enrollment={enrollment}
+          existingSubmission={existingSubmission}
+          onSubmitted={fetchAll}
+        />
+      </div>
+    </div>
+  );
+};
+
+const ActivityBookAnswer = ({ questions, enrollment, existingSubmission, onSubmitted }) => {
+  const supabase = createClient();
+  const [step, setStep] = useState(0);
+  const [answers, setAnswers] = useState({});
+  const [submitting, setSubmitting] = useState(false);
+  const normQuestions = (questions || []).map(normalizeQuestion);
+
+  if (normQuestions.length === 0) return <p className="text-sm text-gray-400">No activity book questions added yet.</p>;
+
+  if (existingSubmission) {
+    return <SubmissionStatus submission={existingSubmission} />;
+  }
+
+  const handleSubmit = async () => {
+    setSubmitting(true);
+    try {
+      const { error } = await supabase.from("submissions").insert({
+        enrollment_id: enrollment.id,
+        user_id: enrollment.user_id,
+        programme_id: enrollment.programme_id,
+        institution_id: enrollment.institution_id,
+        activity_type: "activity_book",
+        answers,
+      });
+      if (error) throw error;
+      await notifyFacilitatorOfSubmission(supabase, enrollment, "Activity Book submitted");
+      onSubmitted();
+    } catch (err) {
+      alert("Could not save submission: " + err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const q = normQuestions[step];
+
+  return (
+    <div className="p-4 rounded-xl" style={{ background: "var(--paper-muted)" }}>
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-sm font-medium" style={{ color: "var(--text)" }}>{q.text}</p>
+        {q.marks != null && <span className="text-xs font-mono px-2 py-0.5 rounded-full flex-shrink-0" style={{ background: "var(--seal-gold-soft)", color: "var(--seal-gold)" }}>{q.marks} marks</span>}
+      </div>
+      <QuestionMedia media={q.media} />
+
+      {q.type === "mcq" ? (
+        <div className="space-y-2 mb-4">
+          {(q.options || []).map((opt, i) => (
+            <label key={i} className="flex items-center gap-2 p-2.5 rounded-lg text-sm cursor-pointer" style={{ background: answers[step] === opt ? "var(--seal-gold-soft)" : "white", border: "1px solid var(--border-soft)" }}>
+              <input type="radio" name={`ab-${step}`} checked={answers[step] === opt} onChange={() => setAnswers((prev) => ({ ...prev, [step]: opt }))} />
+              {opt}
+            </label>
+          ))}
+        </div>
+      ) : q.type === "multi_select" ? (
+        <div className="space-y-2 mb-4">
+          {(q.options || []).map((opt, i) => {
+            const selected = Array.isArray(answers[step]) && answers[step].includes(opt);
+            return (
+              <label key={i} className="flex items-center gap-2 p-2.5 rounded-lg text-sm cursor-pointer" style={{ background: selected ? "var(--seal-gold-soft)" : "white", border: "1px solid var(--border-soft)" }}>
+                <input
+                  type="checkbox" checked={selected}
+                  onChange={() => setAnswers((prev) => {
+                    const current = Array.isArray(prev[step]) ? prev[step] : [];
+                    return { ...prev, [step]: selected ? current.filter((o) => o !== opt) : [...current, opt] };
+                  })}
+                />
+                {opt}
+              </label>
+            );
+          })}
+        </div>
+      ) : q.type === "yesno" ? (
+        <div className="flex gap-3 mb-4">
+          {["Yes", "No"].map((opt) => (
+            <button key={opt} type="button" onClick={() => setAnswers((prev) => ({ ...prev, [step]: opt }))} className="flex-1 py-2.5 rounded-lg text-sm font-medium" style={answers[step] === opt ? { background: "var(--brand-color)", color: "white" } : { background: "white", border: "1px solid var(--border-soft)", color: "var(--text)" }}>
+              {opt}
+            </button>
+          ))}
+        </div>
+      ) : q.type === "image_answer" ? (
+        <AnswerMediaUpload accept="image/*" value={answers[step]} onChange={(url) => setAnswers((prev) => ({ ...prev, [step]: url }))} label="Image" />
+      ) : q.type === "audio_answer" ? (
+        <AnswerMediaUpload accept="audio/*" value={answers[step]} onChange={(url) => setAnswers((prev) => ({ ...prev, [step]: url }))} label="Recording" />
+      ) : (
+        <textarea className="w-full p-3 rounded-lg border text-sm mb-4" style={{ borderColor: "var(--border-soft)" }} value={answers[step] || ""} onChange={(e) => setAnswers((prev) => ({ ...prev, [step]: e.target.value }))} rows={4} />
+      )}
+
+      <div className="flex justify-between">
+        <button onClick={() => setStep((s) => s - 1)} disabled={step === 0} className="px-4 py-2 rounded-lg text-sm bg-gray-100 text-gray-600 disabled:opacity-50">Previous</button>
+        {step < normQuestions.length - 1 ? (
+          <button onClick={() => setStep((s) => s + 1)} className="px-4 py-2 rounded-lg text-sm text-white font-medium" style={{ background: "var(--brand-color)" }}>Next</button>
+        ) : (
+          <button onClick={handleSubmit} disabled={submitting} className="px-4 py-2 rounded-lg text-sm text-white font-medium bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50">{submitting ? "Submitting..." : "Submit"}</button>
+        )}
+      </div>
+      <p className="text-xs text-gray-400 mt-3 text-center font-mono">Question {step + 1} of {normQuestions.length}</p>
+    </div>
+  );
+};
+
 const LibraryPanel = ({ enrollment }) => {
   const supabase = createClient();
   const [programme, setProgramme] = useState(null);
@@ -1577,7 +1766,11 @@ export default function ModulePlayer({ enrollmentId }) {
           {currentActivity === "grades" && <GradesPanel submissions={mySubmissions} />}
                     {currentActivity === "chat" && <ChatPanel enrollment={enrollment} />}
                     {currentActivity === "logbook" && <LogbookPanel enrollment={enrollment} />}
-                    {currentActivity === "library" && <LibraryPanel enrollment={enrollment} />}
+                                        {currentActivity === "library" && (
+                      enrollment.programmes?.qualification_type
+                        ? <LibraryPanel enrollment={enrollment} />
+                        : <SchoolLibraryPanel enrollment={enrollment} />
+                    )}
           {currentActivity === "isa" && <IsaChecklistPanel enrollment={enrollment} />}
           {currentActivity === "fisa" && <FisaPanel enrollment={enrollment} />}
           {currentActivity === "whiteboard" && (
