@@ -6,6 +6,8 @@ import Portal from "../../../components/Portal";
 import Whiteboard from "../../../components/Whiteboard";
 import Link from "next/link";
 import QualificationModulesTab from "../../../components/QualificationModulesTab";
+import SchoolSubjectDocuments from "../../../components/SchoolSubjectDocuments";
+import { useFeatures } from "../../../lib/features/useFeatures";
 import { Plus, Pencil, Eye, Calendar, ArrowLeft } from "lucide-react";
 
 const FIELDS = [
@@ -42,6 +44,7 @@ export default function FacilitatorCoursePage() {
   const router = useRouter();
   const { id } = router.query;
   const supabase = createClient();
+  const features = useFeatures();
 
   const [programme, setProgramme] = useState(null);
   const [weeks, setWeeks] = useState([]);
@@ -213,7 +216,11 @@ export default function FacilitatorCoursePage() {
         </div>
       </div>
 
-            {tab === "documents" && <QualificationModulesTab programme={programme} />}
+            {tab === "documents" && (
+              features.hasTimetable
+                ? <SchoolSubjectDocuments programme={programme} onUpdated={fetchAll} />
+                : <QualificationModulesTab programme={programme} />
+            )}
 
       {tab === "content" && (
         <>
