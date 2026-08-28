@@ -4,11 +4,7 @@ import { createClient } from "../lib/supabase/client";
 
 export default function SchoolSubjectDocuments({ programme, onUpdated }) {
   const supabase = createClient();
-    useEffect(() => {
-    setSyllabusUrl(programme.curriculum_document_url || "");
-    setTextbooks(programme.textbooks || []);
-    setQuestions(programme.activity_book_questions || []);
-  }, [programme.id]);
+  const [syllabusUrl, setSyllabusUrl] = useState(programme.curriculum_document_url || "");
   const [syllabusTopics, setSyllabusTopics] = useState(programme.syllabus_topics || []);
   const [newTopic, setNewTopic] = useState({ week_label: "", topic: "", description: "" });
   const [textbooks, setTextbooks] = useState(programme.textbooks || []);
@@ -23,6 +19,13 @@ export default function SchoolSubjectDocuments({ programme, onUpdated }) {
   const [generateFromId, setGenerateFromId] = useState("");
   const [newQ, setNewQ] = useState({ text: "", type: "free", marks: "", options: [] });
   const [newOption, setNewOption] = useState("");
+
+  useEffect(() => {
+    setSyllabusUrl(programme.curriculum_document_url || "");
+    setSyllabusTopics(programme.syllabus_topics || []);
+    setTextbooks(programme.textbooks || []);
+    setQuestions(programme.activity_book_questions || []);
+  }, [programme.id]);
 
     useEffect(() => {
     setSyllabusUrl(programme.curriculum_document_url || "");

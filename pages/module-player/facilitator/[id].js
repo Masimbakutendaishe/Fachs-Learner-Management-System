@@ -8,6 +8,7 @@ import Link from "next/link";
 import QualificationModulesTab from "../../../components/QualificationModulesTab";
 import SchoolSubjectDocuments from "../../../components/SchoolSubjectDocuments";
 import SchoolGradebook from "../../../components/SchoolGradebook";
+import SchoolAssignmentCenter from "../../../components/SchoolAssignmentCenter";
 import { useFeatures } from "../../../lib/features/useFeatures";
 import { Plus, Pencil, Eye, Calendar, ArrowLeft } from "lucide-react";
 
@@ -201,7 +202,7 @@ export default function FacilitatorCoursePage() {
             { key: "documents", label: "Main Documents" },
             { key: "content", label: "Weekly Content" },
             { key: "submissions", label: "Submissions and Grading" },
-            ...(features.hasTimetable ? [{ key: "gradebook", label: "Gradebook" }] : []),
+            ...(features.hasTimetable ? [{ key: "gradebook", label: "Gradebook" }, { key: "assignments", label: "Assignment Center" }] : []),
             { key: "daily_attendance", label: "Attendance" },
             { key: "messages", label: "Messages" },
             { key: "whiteboard", label: "Whiteboard" },
@@ -224,8 +225,12 @@ export default function FacilitatorCoursePage() {
                 : <QualificationModulesTab programme={programme} />
             )}
 
-            {tab === "gradebook" && features.hasTimetable && (
+                        {tab === "gradebook" && features.hasTimetable && (
               <SchoolGradebook programme={programme} enrolledLearners={enrolledLearners} />
+            )}
+
+            {tab === "assignments" && features.hasTimetable && (
+              <SchoolAssignmentCenter programme={programme} enrolledLearners={enrolledLearners} />
             )}
 
       {tab === "content" && (
