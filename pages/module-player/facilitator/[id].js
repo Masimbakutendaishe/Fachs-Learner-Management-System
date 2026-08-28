@@ -7,6 +7,7 @@ import Whiteboard from "../../../components/Whiteboard";
 import Link from "next/link";
 import QualificationModulesTab from "../../../components/QualificationModulesTab";
 import SchoolSubjectDocuments from "../../../components/SchoolSubjectDocuments";
+import SchoolGradebook from "../../../components/SchoolGradebook";
 import { useFeatures } from "../../../lib/features/useFeatures";
 import { Plus, Pencil, Eye, Calendar, ArrowLeft } from "lucide-react";
 
@@ -196,10 +197,11 @@ export default function FacilitatorCoursePage() {
 
       <div className="flex justify-center mb-6">
         <div className="paper p-1.5 flex gap-1 flex-wrap justify-center rounded-2xl">
-          {[
+                    {[
             { key: "documents", label: "Main Documents" },
             { key: "content", label: "Weekly Content" },
             { key: "submissions", label: "Submissions and Grading" },
+            ...(features.hasTimetable ? [{ key: "gradebook", label: "Gradebook" }] : []),
             { key: "daily_attendance", label: "Attendance" },
             { key: "messages", label: "Messages" },
             { key: "whiteboard", label: "Whiteboard" },
@@ -216,10 +218,14 @@ export default function FacilitatorCoursePage() {
         </div>
       </div>
 
-            {tab === "documents" && (
+                        {tab === "documents" && (
               features.hasTimetable
                 ? <SchoolSubjectDocuments programme={programme} onUpdated={fetchAll} />
                 : <QualificationModulesTab programme={programme} />
+            )}
+
+            {tab === "gradebook" && features.hasTimetable && (
+              <SchoolGradebook programme={programme} enrolledLearners={enrolledLearners} />
             )}
 
       {tab === "content" && (
