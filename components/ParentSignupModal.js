@@ -15,12 +15,40 @@ export default function ParentSignupModal({ isOpen, onClose }) {
   const [code, setCode] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
+  const [mode, setMode] = useState("signup");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (submitting) return;
     setSubmitting(true);
     setMessage("");
+
+    if (mode === "signin") {
+      try {
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", data.user.id)
+          .single();
+
+        if (profile?.role !== "parent") {
+          await supabase.auth.signOut();
+          throw new Error("This isn't a parent account. Use the regular Sign In instead.");
+        }
+
+        onClose();
+        window.location.href = "/parent/dashboard";
+      } catch (err) {
+        setMessage(err.message);
+      } finally {
+        setSubmitting(false);
+      }
+      return;
+    }
+
     try {
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -36,7 +64,7 @@ export default function ParentSignupModal({ isOpen, onClose }) {
       });
       if (error) throw error;
 
-    const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         onClose();
         window.location.href = "/parent/dashboard";
@@ -80,27 +108,31 @@ export default function ParentSignupModal({ isOpen, onClose }) {
             <X size={22} />
           </button>
 
-          <p className="text-xs font-mono text-[var(--text-muted)] mb-1 text-center">PARENT ACCESS</p>
+                   <p className="text-xs font-mono text-[var(--text-muted)] mb-1 text-center">PARENT ACCESS</p>
           <h2 className="font-display text-2xl font-semibold mb-2 text-center" style={{ color: "var(--text)" }}>
-            Create a Parent Account
+            {mode === "signup" ? "Create a Parent Account" : "Parent Sign In"}
           </h2>
-          <p className="text-sm text-center text-gray-500 mb-6">
-            Ask your child for their Parent Invite Code, found on their "My Progress &amp; Marks" page.
-          </p>
+          {mode === "signup" && (
+            <p className="text-sm text-center text-gray-500 mb-6">
+              Ask your child for their Parent Invite Code, found on their "My Progress &amp; Marks" page.
+            </p>
+          )}
 
-          <form onSubmit={handleSubmit} className="space-y-3">
-            <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 gap-3">
-              <input
-                type="text" placeholder="First Name" value={firstName}
-                onChange={(e) => setFirstName(e.target.value)} required
-                className={inputClass} style={{ borderColor: "var(--border-soft)", color: "var(--text)" }}
-              />
-              <input
-                type="text" placeholder="Surname" value={surname}
-                onChange={(e) => setSurname(e.target.value)} required
-                className={inputClass} style={{ borderColor: "var(--border-soft)", color: "var(--text)" }}
-              />
-            </div>
+          <form onSubmit={handleSubmit} className="space-y-3 mt-4">
+            {mode === "signup" && (
+              <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 gap-3">
+                <input
+                  type="text" placeholder="First Name" value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)} required
+                  className={inputClass} style={{ borderColor: "var(--border-soft)", color: "var(--text)" }}
+                />
+                <input
+                  type="text" placeholder="Surname" value={surname}
+                  onChange={(e) => setSurname(e.target.value)} required
+                  className={inputClass} style={{ borderColor: "var(--border-soft)", color: "var(--text)" }}
+                />
+              </div>
+            )}
             <input
               type="email" placeholder="Email" value={email}
               onChange={(e) => setEmail(e.target.value)} required
@@ -111,19 +143,37 @@ export default function ParentSignupModal({ isOpen, onClose }) {
               onChange={(e) => setPassword(e.target.value)} required
               className={inputClass} style={{ borderColor: "var(--border-soft)", color: "var(--text)" }}
             />
-            <input
-              type="text" placeholder="Parent Invite Code" value={code}
-              onChange={(e) => setCode(e.target.value)} required
-              className={`${inputClass} font-mono`} style={{ borderColor: "var(--border-soft)", color: "var(--text)" }}
-            />
+            {mode === "signup" && (
+              <input
+                type="text" placeholder="Parent Invite Code" value={code}
+                onChange={(e) => setCode(e.target.value)} required
+                className={`${inputClass} font-mono`} style={{ borderColor: "var(--border-soft)", color: "var(--text)" }}
+              />
+            )}
             <button
               type="submit" disabled={submitting}
               className="btn-silver w-full py-3 mt-2 rounded-xl font-medium disabled:opacity-50"
             >
-              {submitting ? "Creating account..." : "Create Account"}
+              {submitting ? "Please wait..." : mode === "signup" ? "Create Account" : "Sign In"}
             </button>
             {message && <p className="text-sm text-center" style={{ color: "var(--text-muted)" }}>{message}</p>}
           </form>
+
+          <p className="mt-4 text-center text-sm text-[var(--text-muted)]">
+            {mode === "signup" ? (
+              <>Already have a parent account?{" "}
+                <button onClick={() => { setMode("signin"); setMessage(""); }} className="font-medium" style={{ color: "var(--brand-color)" }}>
+                  Sign in
+                </button>
+              </>
+            ) : (
+              <>Need to create one?{" "}
+                <button onClick={() => { setMode("signup"); setMessage(""); }} className="font-medium" style={{ color: "var(--brand-color)" }}>
+                  Sign up
+                </button>
+              </>
+            )}
+          </p>
         </div>
       </div>
     </Portal>
