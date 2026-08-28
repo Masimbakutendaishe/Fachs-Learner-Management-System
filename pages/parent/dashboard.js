@@ -29,13 +29,30 @@ export default function ParentDashboard() {
   }, [selectedChildId]);
 
   const fetchChildren = async () => {
-    const { data: links } = await supabase
+    const { data: links, error: linksError } = await supabase
       .from("parent_learner_links")
-      .select("learner_id, profiles!parent_learner_links_learner_id_fkey ( first_name, surname )")
+      .select("learner_id")
       .eq("parent_id", user.id);
-    setChildren(links || []);
-    if (links?.length) setSelectedChildId(links[0].learner_id);
-    else setLoading(false);
+
+    if (linksError || !links?.length) {
+      setChildren([]);
+      setLoading(false);
+      return;
+    }
+
+    const learnerIds = links.map((l) => l.learner_id);
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("id, first_name, surname")
+      .in("id", learnerIds);
+
+    const enriched = links.map((l) => ({
+      learner_id: l.learner_id,
+      profiles: profiles?.find((p) => p.id === l.learner_id) || null,
+    }));
+
+    setChildren(enriched);
+    setSelectedChildId(enriched[0].learner_id);
   };
 
   const fetchChildData = async () => {

@@ -22,6 +22,7 @@ export default function Home() {
   const [newAnnouncement, setNewAnnouncement] = useState({ title: "", body: "" });
   const [postingAnnouncement, setPostingAnnouncement] = useState(false);
   const [pendingGradingCount, setPendingGradingCount] = useState(0);
+  const [parentChildren, setParentChildren] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [newTask, setNewTask] = useState({ title: "", due_date: "", due_time: "" });
   const [addingTask, setAddingTask] = useState(false);
@@ -46,8 +47,17 @@ export default function Home() {
       );
     }
 
-    const { data: announcementsData } = await announcementsQuery;
+        const { data: announcementsData } = await announcementsQuery;
     setAnnouncements((announcementsData || []).slice(0, 5));
+
+    if (role === "parent") {
+      const { data: links } = await supabase.from("parent_learner_links").select("learner_id").eq("parent_id", user.id);
+      const learnerIds = (links || []).map((l) => l.learner_id);
+      if (learnerIds.length > 0) {
+        const { data: childProfiles } = await supabase.from("profiles").select("first_name, surname").in("id", learnerIds);
+        setParentChildren(childProfiles || []);
+      }
+    }
 
     if (role === "facilitator") {
       const { data: weeksData } = await supabase
@@ -205,11 +215,16 @@ export default function Home() {
           <h1 className="font-display text-3xl font-semibold mb-1" style={{ color: "var(--text)" }}>
             Welcome back{profile?.first_name ? `, ${profile.first_name}` : ""}
           </h1>
-          <p className="text-sm text-[var(--text-muted)]">
+                    <p className="text-sm text-[var(--text-muted)]">
             {role === "facilitator" && `You're facilitating ${institution?.name || "your institution"}'s courses.`}
             {role === "learner" && "Here's what's happening across your courses."}
             {role === "institution_admin" && "Here's an overview of your institution."}
             {role === "superadmin" && "Platform overview."}
+            {role === "parent" && (
+              parentChildren.length > 0
+                ? `Here's ${parentChildren.map((c) => `${c.first_name || ""} ${c.surname || ""}`.trim()).join(" and ")}'s progress.`
+                : "No children linked to your account yet."
+            )}
           </p>
         </section>
       ) : (
@@ -434,12 +449,15 @@ export default function Home() {
                 <Link href="/admin/billing" className="paper p-5 card-lift text-sm font-medium" style={{ color: "var(--text)" }}>Billing</Link>
               </>
             )}
-            {role === "superadmin" && (
+                        {role === "superadmin" && (
               <>
                 <Link href="/superadmin" className="paper p-5 card-lift text-sm font-medium" style={{ color: "var(--text)" }}>Institutions</Link>
                 <Link href="/superadmin/users" className="paper p-5 card-lift text-sm font-medium" style={{ color: "var(--text)" }}>Users</Link>
                 <Link href="/superadmin/plans" className="paper p-5 card-lift text-sm font-medium" style={{ color: "var(--text)" }}>Plans</Link>
               </>
+            )}
+            {role === "parent" && (
+              <Link href="/parent/dashboard" className="paper p-5 card-lift text-sm font-medium" style={{ color: "var(--text)" }}>View Full Progress</Link>
             )}
           </div>
         </section>
