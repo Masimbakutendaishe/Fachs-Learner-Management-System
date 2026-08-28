@@ -3,6 +3,7 @@ import Head from "next/head";
 import Link from "next/link";
 import Button from "../components/Button";
 import AuthModal from "../components/AuthModal";
+import ParentSignupModal from "../components/ParentSignupModal";
 import ChatModal from "../components/ChatModal";
 import CountUp from "react-countup";
 import VisibilitySensor from "react-visibility-sensor";
@@ -12,6 +13,7 @@ import { useAuth } from "./context/AuthContext";
 export default function Home() {
   const { institution, user, role, profile } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
+  const [parentModalOpen, setParentModalOpen] = useState(false);
   const [mode, setMode] = useState("signin");
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [sessionUser, setSessionUser] = useState(null);
@@ -238,14 +240,22 @@ export default function Home() {
             </Button>
           </div>
 
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-mono" style={{ background: "var(--seal-gold-soft)", color: "var(--seal-gold)" }}>
+                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-mono" style={{ background: "var(--seal-gold-soft)", color: "var(--seal-gold)" }}>
             <span className="w-1.5 h-1.5 rounded-full" style={{ background: "var(--seal-gold)" }} />
             QCTO & SETA Accredited Programmes
           </div>
+
+                              <p className="text-sm text-[var(--text-muted)] mt-6">
+            Parent or guardian?{" "}
+            <button onClick={() => setParentModalOpen(true)} className="font-medium" style={{ color: "var(--brand-color)" }}>
+              Create a parent account
+            </button>
+          </p>
         </section>
       )}
 
       <AuthModal isOpen={isOpen} onClose={() => setIsOpen(false)} mode={mode} />
+      <ParentSignupModal isOpen={parentModalOpen} onClose={() => setParentModalOpen(false)} />
 
             {sessionUser ? (
         <section className="grid md:grid-cols-2 gap-6 max-w-5xl mx-auto mb-12">
