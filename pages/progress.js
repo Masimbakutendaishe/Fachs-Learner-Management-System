@@ -14,10 +14,13 @@ const ACTIVITY_LABELS = {
 
 export default function ProgressPage() {
   const supabase = createClient();
-  const { user } = useAuth();
+  const { user, institution } = useAuth();
   const [thisWeek, setThisWeek] = useState([]);
   const [grades, setGrades] = useState([]);
   const [attendance, setAttendance] = useState([]);
+  const [parentCode, setParentCode] = useState(null);
+  const [generatingCode, setGeneratingCode] = useState(false);
+  const [codeCopied, setCodeCopied] = useState(false);
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -25,8 +28,40 @@ export default function ProgressPage() {
     if (user) fetchData();
   }, [user]);
 
+  const fetchExistingParentCode = async () => {
+    const { data } = await supabase
+      .from("learner_parent_invite_codes")
+      .select("code")
+      .eq("learner_id", user.id)
+      .eq("used", false)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    setParentCode(data?.code || null);
+  };
+
+  const generateParentCode = async () => {
+    setGeneratingCode(true);
+    const code = Math.random().toString(36).slice(2, 10).toUpperCase();
+    const { error } = await supabase.from("learner_parent_invite_codes").insert({
+      learner_id: user.id,
+      institution_id: institution.id,
+      code,
+    });
+    if (error) alert(error.message);
+    else setParentCode(code);
+    setGeneratingCode(false);
+  };
+
+  const copyParentCode = () => {
+    navigator.clipboard.writeText(parentCode);
+    setCodeCopied(true);
+    setTimeout(() => setCodeCopied(false), 1500);
+  };
+
   const fetchData = async () => {
     setLoading(true);
+    if (institution) fetchExistingParentCode();
 
     const { data: enrollments } = await supabase
       .from("enrollments")
@@ -223,7 +258,29 @@ export default function ProgressPage() {
               </tbody>
             </table>
           </div>
-        )}
+                )}
+      </section>
+
+      <section>
+        <h2 className="font-display text-lg font-semibold mb-4" style={{ color: "var(--text)" }}>Invite a Parent</h2>
+        <div className="paper p-6">
+          {parentCode ? (
+            <div className="flex items-center gap-3 flex-wrap">
+              <code className="px-3 py-2 rounded-lg font-mono text-sm" style={{ background: "var(--paper-muted)", border: "1px solid var(--border-soft)" }}>{parentCode}</code>
+              <button onClick={copyParentCode} className="text-xs font-medium px-3 py-2 rounded-lg" style={{ border: "1px solid var(--border-soft)", color: "var(--text)" }}>
+                {codeCopied ? "Copied!" : "Copy Code"}
+              </button>
+              <button onClick={generateParentCode} disabled={generatingCode} className="text-xs font-medium disabled:opacity-50" style={{ color: "var(--brand-color)" }}>
+                Generate a new code
+              </button>
+            </div>
+          ) : (
+            <button onClick={generateParentCode} disabled={generatingCode} className="btn-silver px-5 py-2.5 rounded-lg text-sm font-medium disabled:opacity-50">
+              {generatingCode ? "Generating..." : "Generate Parent Invite Code"}
+            </button>
+          )}
+          <p className="text-xs text-gray-500 mt-3">Share this code with your parent, they'll enter it when signing up to see your grades, attendance, and announcements.</p>
+        </div>
       </section>
     </div>
   );
