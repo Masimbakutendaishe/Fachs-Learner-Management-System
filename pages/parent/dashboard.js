@@ -19,6 +19,10 @@ export default function ParentDashboard() {
   const [attendance, setAttendance] = useState([]);
   const [announcements, setAnnouncements] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [addingChild, setAddingChild] = useState(false);
+  const [newChildCode, setNewChildCode] = useState("");
+  const [linkingChild, setLinkingChild] = useState(false);
+  const [linkError, setLinkError] = useState("");
 
   useEffect(() => {
     if (user) fetchChildren();
@@ -51,8 +55,43 @@ export default function ParentDashboard() {
       profiles: profiles?.find((p) => p.id === l.learner_id) || null,
     }));
 
-    setChildren(enriched);
-    setSelectedChildId(enriched[0].learner_id);
+        setChildren(enriched);
+    if (!selectedChildId) setSelectedChildId(enriched[0].learner_id);
+    setLoading(false);
+  };
+
+  const linkAnotherChild = async () => {
+    if (!newChildCode.trim()) return;
+    setLinkingChild(true);
+    setLinkError("");
+    try {
+      const code = newChildCode.trim().toUpperCase();
+      const { data: invite, error: inviteError } = await supabase
+        .from("learner_parent_invite_codes")
+        .select("learner_id, institution_id")
+        .eq("code", code)
+        .eq("used", false)
+        .maybeSingle();
+
+      if (inviteError || !invite) throw new Error("That code is invalid or has already been used.");
+
+      const { error: linkErr } = await supabase.from("parent_learner_links").insert({
+        parent_id: user.id,
+        learner_id: invite.learner_id,
+        institution_id: invite.institution_id,
+      });
+      if (linkErr) throw linkErr;
+
+      await supabase.from("learner_parent_invite_codes").update({ used: true }).eq("code", code);
+
+      setNewChildCode("");
+      setAddingChild(false);
+      fetchChildren();
+    } catch (err) {
+      setLinkError(err.message);
+    } finally {
+      setLinkingChild(false);
+    }
   };
 
   const fetchChildData = async () => {
@@ -90,10 +129,21 @@ export default function ParentDashboard() {
 
   if (!user) return null;
 
-  if (children.length === 0 && !loading) {
+   if (children.length === 0 && !loading) {
     return (
-      <div className="max-w-lg mx-auto py-16 text-center">
-        <p className="text-sm text-gray-500">No children linked to your account yet. Ask them for their Parent Invite Code from their "My Progress & Marks" page.</p>
+      <div className="max-w-md mx-auto py-16 text-center">
+        <p className="text-sm text-gray-500 mb-4">No children linked to your account yet. Ask them for their Parent Invite Code from their "My Progress & Marks" page.</p>
+        <div className="paper p-6">
+          <input
+            type="text" placeholder="Parent Invite Code" value={newChildCode}
+            onChange={(e) => setNewChildCode(e.target.value)}
+            className="w-full px-3 py-2 rounded-lg border text-sm font-mono mb-3" style={{ borderColor: "var(--border-soft)" }}
+          />
+          <button onClick={linkAnotherChild} disabled={linkingChild} className="btn-silver w-full py-2.5 rounded-lg text-sm font-medium disabled:opacity-50">
+            {linkingChild ? "Linking..." : "Link Child"}
+          </button>
+          {linkError && <p className="text-xs text-red-500 mt-2">{linkError}</p>}
+        </div>
       </div>
     );
   }
@@ -108,21 +158,43 @@ export default function ParentDashboard() {
         <h1 className="font-display text-3xl font-semibold" style={{ color: "var(--text)" }}>{childName ? `${childName}'s Progress` : "Progress"}</h1>
       </header>
 
-      {children.length > 1 && (
-        <div className="flex gap-2">
-          {children.map((c) => {
-            const name = c.profiles ? `${c.profiles.first_name || ""} ${c.profiles.surname || ""}`.trim() : "Unknown";
-            return (
-              <button
-                key={c.learner_id}
-                onClick={() => setSelectedChildId(c.learner_id)}
-                className="px-4 py-2 rounded-lg text-sm font-medium"
-                style={selectedChildId === c.learner_id ? { background: "var(--brand-color)", color: "white" } : { background: "var(--paper)", border: "1px solid var(--border-soft)", color: "var(--text-muted)" }}
-              >
-                {name}
-              </button>
-            );
-          })}
+           <div className="flex items-center gap-2 flex-wrap">
+        {children.map((c) => {
+          const name = c.profiles ? `${c.profiles.first_name || ""} ${c.profiles.surname || ""}`.trim() : "Unknown";
+          return (
+            <button
+              key={c.learner_id}
+              onClick={() => setSelectedChildId(c.learner_id)}
+              className="px-4 py-2 rounded-lg text-sm font-medium"
+              style={selectedChildId === c.learner_id ? { background: "var(--brand-color)", color: "white" } : { background: "var(--paper)", border: "1px solid var(--border-soft)", color: "var(--text-muted)" }}
+            >
+              {name}
+            </button>
+          );
+        })}
+        <button
+          onClick={() => setAddingChild((v) => !v)}
+          className="px-4 py-2 rounded-lg text-sm font-medium"
+          style={{ border: "1px solid var(--border-soft)", color: "var(--brand-color)" }}
+        >
+          + Add Another Child
+        </button>
+      </div>
+
+      {addingChild && (
+        <div className="paper p-5 max-w-sm">
+          <label className="block text-xs text-[var(--text-muted)] mb-1">Parent Invite Code</label>
+          <div className="flex gap-2">
+            <input
+              type="text" placeholder="e.g. AB12CD34" value={newChildCode}
+              onChange={(e) => setNewChildCode(e.target.value)}
+              className="flex-1 px-3 py-2 rounded-lg border text-sm font-mono" style={{ borderColor: "var(--border-soft)" }}
+            />
+            <button onClick={linkAnotherChild} disabled={linkingChild} className="px-4 py-2 rounded-lg text-sm font-medium text-white disabled:opacity-50" style={{ background: "var(--brand-color)" }}>
+              {linkingChild ? "Linking..." : "Link"}
+            </button>
+          </div>
+          {linkError && <p className="text-xs text-red-500 mt-2">{linkError}</p>}
         </div>
       )}
 
