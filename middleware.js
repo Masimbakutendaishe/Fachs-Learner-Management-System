@@ -17,6 +17,7 @@ const ROLE_PREFIXES = {
   "/facilitator": ["facilitator"],
   "/admin": ["institution_admin", "superadmin"],
   "/superadmin": ["superadmin"],
+  "/parent": ["parent"],
   "/gradesubmissions": ["facilitator", "institution_admin", "superadmin"],
   "/studentsubmissionspage": ["facilitator", "institution_admin", "superadmin"],
   "/previousuploads": ["facilitator", "institution_admin", "superadmin"],
@@ -26,6 +27,7 @@ function homeForRole(role) {
   if (role === "superadmin") return "/superadmin";
   if (role === "institution_admin") return "/admin/institution-settings";
   if (role === "facilitator") return "/facilitator/dashboard";
+  if (role === "parent") return "/parent/dashboard";
   return "/dashboard";
 }
 
@@ -100,6 +102,7 @@ export const config = {
     "/facilitator/:path*",
     "/admin/:path*",
     "/superadmin/:path*",
+    "/parent/:path*",
     "/module-player/:path*",
     "/gradesubmissions/:path*",
     "/studentsubmissionspage/:path*",

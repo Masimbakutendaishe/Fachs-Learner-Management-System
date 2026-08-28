@@ -138,9 +138,9 @@ export default function MobileNavbar() {
             )}
           </div>
         )}
-        {isAuthenticated && !hasCenteredIcons && (
+                {isAuthenticated && !hasCenteredIcons && (
           <Link
-            href="/dashboard"
+            href={profile?.role === "parent" ? "/parent/dashboard" : "/dashboard"}
             className="p-2 rounded-lg hover:bg-black/5 transition-colors"
           >
             <LayoutDashboard size={18} className="text-[var(--text-muted)]" />

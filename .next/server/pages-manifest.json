@@ -4,5 +4,8 @@
   "/_document": "pages/_document.js",
   "/": "pages/index.js",
   "/facilitator/dashboard": "pages/facilitator/dashboard.js",
+  "/qualifications": "pages/qualifications.js",
+  "/dashboard": "pages/dashboard.js",
+  "/progress": "pages/progress.js",
   "/module-player/facilitator/[id]": "pages/module-player/facilitator/[id].js"
 }
