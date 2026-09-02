@@ -94,9 +94,9 @@ export default function FacilitatorLoginModal({ isOpen, onClose, onSwitchToLearn
       if (profileError) {
         return alert("Error verifying your profile. Please try again.");
       }
-      if (!profile || !["facilitator", "institution_admin", "superadmin"].includes(profile.role)) {
+            if (!profile || !["facilitator", "institution_admin", "superadmin", "assessor", "moderator"].includes(profile.role)) {
         await supabase.auth.signOut();
-        return alert("Access denied. This login is for facilitators, institution admins, and platform admins only.");
+        return alert("Access denied. This login is for facilitators, assessors, moderators, institution admins, and platform admins only.");
       }
 
       onClose();
@@ -105,6 +105,10 @@ export default function FacilitatorLoginModal({ isOpen, onClose, onSwitchToLearn
           ? "/superadmin"
           : profile.role === "institution_admin"
           ? "/admin/institution-settings"
+          : profile.role === "assessor"
+          ? "/assessor/dashboard"
+          : profile.role === "moderator"
+          ? "/moderator/dashboard"
           : "/facilitator/dashboard"
       );
     } finally {
@@ -201,12 +205,17 @@ export default function FacilitatorLoginModal({ isOpen, onClose, onSwitchToLearn
                     <option value="school">School (Primary / High School / College)</option>
                   </select>
                 </>
-              ) : (
-                <input
-                  type="text" placeholder="Invite Code" value={inviteCode}
-                  onChange={(e) => setInviteCode(e.target.value)} required
-                  className={`${inputClass} font-mono`} style={{ borderColor: "var(--border-soft)", color: "var(--text)" }}
-                />
+                            ) : (
+                <>
+                  <input
+                    type="text" placeholder="Invite Code" value={inviteCode}
+                    onChange={(e) => setInviteCode(e.target.value)} required
+                    className={`${inputClass} font-mono`} style={{ borderColor: "var(--border-soft)", color: "var(--text)" }}
+                  />
+                  <p className="text-xs text-gray-500">
+                    Assessors and moderators also join this way, your institution admin will assign your specific role afterward.
+                  </p>
+                </>
               )}
             </>
           )}
