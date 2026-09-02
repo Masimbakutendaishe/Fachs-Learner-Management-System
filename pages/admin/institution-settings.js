@@ -26,7 +26,7 @@ const COLOR_FIELDS = [
 
 export default function InstitutionSettings() {
   const supabase = createClient();
-  const { institution, profile } = useAuth();
+  const { institution, profile, refreshInstitution } = useAuth();
 
   const [name, setName] = useState("");
   const [motto, setMotto] = useState("");
@@ -88,7 +88,9 @@ export default function InstitutionSettings() {
         })
         .eq("id", institution.id);
 
-      if (error) throw error;
+            if (error) throw error;
+
+      await refreshInstitution();
 
       document.documentElement.style.setProperty("--brand-color", colors.theme_color);
       document.documentElement.style.setProperty("--brand-secondary", colors.secondary_color);

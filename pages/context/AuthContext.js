@@ -53,11 +53,22 @@ export function AuthProvider({ children }) {
     };
   }, []);
 
-  const signOut = async () => {
+    const signOut = async () => {
     await supabase.auth.signOut();
     setUser(null);
     setProfile(null);
     window.location.href = "/";
+  };
+
+  const refreshInstitution = async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from("profiles")
+      .select("*, institutions(*)")
+      .eq("id", user.id)
+      .single();
+    setProfile(data || null);
+    setInstitution(data?.institutions || null);
   };
 
   return (
@@ -70,6 +81,7 @@ export function AuthProvider({ children }) {
         isAuthenticated: !!user,
         loading,
         signOut,
+        refreshInstitution,
       }}
     >
       {children}
