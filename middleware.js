@@ -18,6 +18,8 @@ const ROLE_PREFIXES = {
   "/admin": ["institution_admin", "superadmin"],
   "/superadmin": ["superadmin"],
   "/parent": ["parent"],
+  "/assessor": ["assessor"],
+  "/moderator": ["moderator"],
   "/gradesubmissions": ["facilitator", "institution_admin", "superadmin"],
   "/studentsubmissionspage": ["facilitator", "institution_admin", "superadmin"],
   "/previousuploads": ["facilitator", "institution_admin", "superadmin"],
@@ -28,6 +30,8 @@ function homeForRole(role) {
   if (role === "institution_admin") return "/admin/institution-settings";
   if (role === "facilitator") return "/facilitator/dashboard";
   if (role === "parent") return "/parent/dashboard";
+  if (role === "assessor") return "/assessor/dashboard";
+  if (role === "moderator") return "/moderator/dashboard";
   return "/dashboard";
 }
 
@@ -103,6 +107,8 @@ export const config = {
     "/admin/:path*",
     "/superadmin/:path*",
     "/parent/:path*",
+    "/assessor/:path*",
+    "/moderator/:path*",
     "/module-player/:path*",
     "/gradesubmissions/:path*",
     "/studentsubmissionspage/:path*",

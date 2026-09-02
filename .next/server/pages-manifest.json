@@ -2,8 +2,5 @@
   "/_app": "pages/_app.js",
   "/_error": "pages/_error.js",
   "/_document": "pages/_document.js",
-  "/qualifications": "pages/qualifications.js",
-  "/": "pages/index.js",
-  "/profile": "pages/profile.js",
-  "/parent/dashboard": "pages/parent/dashboard.js"
+  "/": "pages/index.js"
 }

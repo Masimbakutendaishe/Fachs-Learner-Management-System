@@ -441,12 +441,13 @@ export default function Home() {
                 </div>
               </>
             )}
-            {role === "institution_admin" && (
+                        {role === "institution_admin" && (
               <>
                 <Link href="/admin/institution-settings" className="paper p-5 card-lift text-sm font-medium" style={{ color: "var(--text)" }}>Institution Settings</Link>
                 <Link href="/admin/users" className="paper p-5 card-lift text-sm font-medium" style={{ color: "var(--text)" }}>Manage Users</Link>
                 <Link href="/admin/fees" className="paper p-5 card-lift text-sm font-medium" style={{ color: "var(--text)" }}>Fees &amp; Invoices</Link>
                 <Link href="/admin/billing" className="paper p-5 card-lift text-sm font-medium" style={{ color: "var(--text)" }}>Billing</Link>
+                <Link href="/admin/reviewers" className="paper p-5 card-lift text-sm font-medium" style={{ color: "var(--text)" }}>Assessors &amp; Moderators</Link>
               </>
             )}
                         {role === "superadmin" && (
