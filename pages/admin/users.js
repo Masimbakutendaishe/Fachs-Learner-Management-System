@@ -48,6 +48,12 @@ export default function AdminUsers() {
     fetchAll();
   };
 
+  const updateRole = async (userId, newRole) => {
+    const { error } = await supabase.from("profiles").update({ role: newRole }).eq("id", userId);
+    if (error) return alert(error.message);
+    fetchAll();
+  };
+
   const filtered = users.filter((u) => {
     const q = search.toLowerCase();
     const matchesSearch = `${u.first_name} ${u.surname}`.toLowerCase().includes(q);
@@ -98,7 +104,18 @@ export default function AdminUsers() {
                 {filtered.map((u) => (
                   <tr key={u.id} className="border-b last:border-0" style={{ borderColor: "var(--border-soft)" }}>
                     <td className="px-4 py-3 font-medium" style={{ color: "var(--text)" }}>{u.first_name} {u.surname}</td>
-                    <td className="px-4 py-3 text-gray-500 capitalize">{u.role?.replace("_", " ")}</td>
+                                        <td className="px-4 py-3">
+                      <select
+                        value={u.role}
+                        onChange={(e) => updateRole(u.id, e.target.value)}
+                        className="text-xs px-2 py-1 rounded-lg border capitalize"
+                        style={{ borderColor: "var(--border-soft)" }}
+                      >
+                        {["learner", "facilitator", "institution_admin", "assessor", "moderator", "parent"].map((r) => (
+                          <option key={r} value={r}>{r.replace("_", " ")}</option>
+                        ))}
+                      </select>
+                    </td>
                     <td className="px-4 py-3">
                       <span className="text-xs font-medium px-2.5 py-1 rounded-full" style={u.is_active ? { background: "#ECFDF5", color: "#047857" } : { background: "#FEF2F2", color: "#B91C1C" }}>
                         {u.is_active ? "Active" : "Deactivated"}
