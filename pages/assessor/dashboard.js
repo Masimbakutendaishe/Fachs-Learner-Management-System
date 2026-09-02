@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { createClient } from "../../lib/supabase/client";
-
+import QaChat from "../../components/QaChat";
+import { useState as useStateAlias } from "react";
 const ACTIVITY_LABELS = {
   workbook: "Workbook",
   knowledge: "Knowledge",
@@ -27,10 +28,10 @@ export default function AssessorDashboard() {
     if (selectedProgrammeId) fetchSubmissions();
   }, [selectedProgrammeId]);
 
-  const fetchProgrammes = async () => {
+    const fetchProgrammes = async () => {
     const { data } = await supabase
       .from("qualification_reviewers")
-      .select("programme_id, programmes ( id, name )")
+      .select("programme_id, programmes ( id, name, institution_id )")
       .eq("user_id", user.id)
       .eq("reviewer_role", "assessor");
     const progs = (data || []).map((r) => r.programmes).filter(Boolean);
@@ -103,7 +104,7 @@ export default function AssessorDashboard() {
             ))}
           </div>
 
-          {loading ? (
+                    {loading ? (
             <p className="text-sm font-mono text-[var(--text-muted)]">Loading...</p>
           ) : filtered.length === 0 ? (
             <div className="paper p-8 text-center text-gray-500 text-sm">Nothing here right now.</div>
@@ -114,6 +115,15 @@ export default function AssessorDashboard() {
               ))}
             </div>
           )}
+
+                    <div className="mt-6">
+            <QaChat
+              programmeId={selectedProgrammeId}
+              institutionId={programmes.find((p) => p.id === selectedProgrammeId)?.institution_id}
+              currentUserId={user.id}
+              title="Chat with Facilitator"
+            />
+          </div>
         </>
       )}
     </div>

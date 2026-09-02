@@ -9,6 +9,7 @@ import QualificationModulesTab from "../../../components/QualificationModulesTab
 import SchoolSubjectDocuments from "../../../components/SchoolSubjectDocuments";
 import SchoolGradebook from "../../../components/SchoolGradebook";
 import SchoolAssignmentCenter from "../../../components/SchoolAssignmentCenter";
+import QaChat from "../../../components/QaChat";
 import { useFeatures } from "../../../lib/features/useFeatures";
 import { Plus, Pencil, Eye, Calendar, ArrowLeft } from "lucide-react";
 
@@ -203,6 +204,7 @@ export default function FacilitatorCoursePage() {
             { key: "content", label: "Weekly Content" },
             { key: "submissions", label: "Submissions and Grading" },
             ...(features.hasTimetable ? [{ key: "gradebook", label: "Gradebook" }, { key: "assignments", label: "Assignment Center" }] : []),
+            ...(!features.hasTimetable ? [{ key: "qa_chat", label: "Assessor/Moderator" }] : []),
             { key: "daily_attendance", label: "Attendance" },
             { key: "messages", label: "Messages" },
             { key: "whiteboard", label: "Whiteboard" },
@@ -229,8 +231,12 @@ export default function FacilitatorCoursePage() {
               <SchoolGradebook programme={programme} enrolledLearners={enrolledLearners} />
             )}
 
-            {tab === "assignments" && features.hasTimetable && (
+                        {tab === "assignments" && features.hasTimetable && (
               <SchoolAssignmentCenter programme={programme} enrolledLearners={enrolledLearners} />
+            )}
+
+            {tab === "qa_chat" && !features.hasTimetable && (
+              <QaChat programmeId={programme.id} institutionId={programme.institution_id} currentUserId={facilitatorId} title="Chat with Assessor/Moderator" />
             )}
 
       {tab === "content" && (
