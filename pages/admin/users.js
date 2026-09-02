@@ -78,6 +78,9 @@ export default function AdminUsers() {
               <option value="all">All roles</option>
               <option value="learner">Learner</option>
               <option value="facilitator">Facilitator</option>
+              <option value="assessor">Assessor</option>
+              <option value="moderator">Moderator</option>
+              <option value="parent">Parent</option>
             </select>
           </div>
 

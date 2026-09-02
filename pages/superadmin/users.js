@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { createClient } from "../../lib/supabase/client";
 
-const ROLES = ["learner", "facilitator", "institution_admin", "superadmin"];
+const ROLES = ["learner", "facilitator", "institution_admin", "superadmin", "assessor", "moderator", "parent"];
 
 export default function SuperadminUsers() {
   const supabase = createClient();

@@ -175,7 +175,7 @@ export default function InstitutionDetail() {
         <div className="p-5 pb-3 flex items-center justify-between flex-wrap gap-3">
           <h2 className="font-display font-semibold" style={{ color: "var(--text)" }}>Users ({filteredUsers.length} of {users.length})</h2>
           <div className="flex gap-2 flex-wrap">
-            {["all", "learner", "facilitator", "institution_admin"].map((r) => {
+              {["all", "learner", "facilitator", "institution_admin", "assessor", "moderator", "parent"].map((r) => {
               const count = r === "all" ? users.length : users.filter((u) => u.role === r).length;
               return (
                 <button
@@ -210,7 +210,7 @@ export default function InstitutionDetail() {
                     className="text-xs px-2 py-1 rounded-lg border capitalize"
                     style={{ borderColor: "var(--border-soft)" }}
                   >
-                    {["learner", "facilitator", "institution_admin", "superadmin"].map((r) => (
+                    {["learner", "facilitator", "institution_admin", "superadmin", "assessor", "moderator", "parent"].map((r) => (
                       <option key={r} value={r}>{r.replace("_", " ")}</option>
                     ))}
                   </select>
