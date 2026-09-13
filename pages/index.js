@@ -22,6 +22,7 @@ export default function Home() {
   const [newAnnouncement, setNewAnnouncement] = useState({ title: "", body: "" });
   const [postingAnnouncement, setPostingAnnouncement] = useState(false);
   const [pendingGradingCount, setPendingGradingCount] = useState(0);
+  const [myProgrammes, setMyProgrammes] = useState([]);
   const [parentChildren, setParentChildren] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [newTask, setNewTask] = useState({ title: "", due_date: "", due_time: "" });
@@ -60,6 +61,8 @@ export default function Home() {
     }
 
     if (role === "facilitator") {
+      const { data: progsData } = await supabase.from("programmes").select("id, name").eq("facilitator_id", user.id);
+      setMyProgrammes(progsData || []);
       const { data: weeksData } = await supabase
         .from("unit_weeks")
         .select("unit_standard_title, session_datetime, programmes ( name, facilitator_id )")
@@ -111,16 +114,15 @@ export default function Home() {
   const postAnnouncement = async () => {
     if (!newAnnouncement.title.trim()) return;
     setPostingAnnouncement(true);
-    const { data: myProgrammes } = role === "facilitator"
-      ? await supabase.from("programmes").select("id").eq("facilitator_id", user.id)
-      : { data: null };
+    const isSpecificQualification = newAnnouncement.audience && newAnnouncement.audience.startsWith("qualification:");
+    const targetProgrammeId = isSpecificQualification ? Number(newAnnouncement.audience.split(":")[1]) : null;
     const { error } = await supabase.from("announcements").insert({
       institution_id: institution.id,
       author_id: user.id,
       title: newAnnouncement.title,
       body: newAnnouncement.body,
-      audience: newAnnouncement.audience || "everyone",
-      programme_id: newAnnouncement.audience === "my_learners" ? myProgrammes?.[0]?.id : null,
+      audience: isSpecificQualification ? "my_learners" : (newAnnouncement.audience || "everyone"),
+      programme_id: targetProgrammeId,
     });
     if (error) alert(error.message);
     else {
@@ -297,7 +299,10 @@ export default function Home() {
                     className="w-full px-3 py-2 rounded-lg border text-sm" style={{ borderColor: "var(--border-soft)" }}
                   >
                     <option value="everyone">Everyone in {institution?.name || "the institution"}</option>
-                    <option value="my_learners">Just my learners</option>
+                    <option value="my_learners">All my learners (across all my qualifications)</option>
+                    {myProgrammes.map((p) => (
+                      <option key={p.id} value={`qualification:${p.id}`}>Just learners in: {p.name}</option>
+                    ))}
                   </select>
                 )}
                 <button onClick={postAnnouncement} disabled={postingAnnouncement} className="text-xs font-medium px-3 py-1.5 rounded-lg disabled:opacity-50" style={{ background: "var(--brand-color)", color: "white" }}>
