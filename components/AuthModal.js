@@ -15,7 +15,8 @@ export default function AuthModal({ isOpen, onClose, onSelectQualification, mode
   const [firstName, setFirstName] = useState("");
   const [surname, setSurname] = useState("");
   const [dob, setDob] = useState("");
-  const [qualification, setQualification] = useState("");
+  const [institutionId, setInstitutionId] = useState("");
+  const [institutions, setInstitutions] = useState([]);
   const [qualifications, setQualifications] = useState([]);
   const [profilePicFile, setProfilePicFile] = useState(null);
   const [uploadingPic, setUploadingPic] = useState(false);
@@ -24,6 +25,18 @@ export default function AuthModal({ isOpen, onClose, onSelectQualification, mode
   useEffect(() => {
     if (initialMode) setMode(initialMode);
   }, [initialMode]);
+
+  useEffect(() => {
+    const fetchInstitutions = async () => {
+      const { data, error } = await supabase
+        .from("institutions")
+        .select("id, name")
+        .order("name");
+      if (error) console.error("Error fetching institutions:", error.message);
+      else setInstitutions(data || []);
+    };
+    fetchInstitutions();
+  }, []);
 
   useEffect(() => {
     const fetchQualifications = async () => {
@@ -75,8 +88,7 @@ export default function AuthModal({ isOpen, onClose, onSelectQualification, mode
 
     try {
     if (mode === "signup") {
-        const selectedProgramme = qualifications.find((q) => q.id === Number(qualification));
-        if (!selectedProgramme) return alert("Please select a valid programme.");
+        if (!institutionId) return alert("Please select your institution.");
 
         const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
           email,
@@ -86,7 +98,7 @@ export default function AuthModal({ isOpen, onClose, onSelectQualification, mode
               role: "learner",
               first_name: firstName,
               surname,
-              institution_id: selectedProgramme.institution_id,
+              institution_id: institutionId,
             },
           },
         });
@@ -104,18 +116,14 @@ export default function AuthModal({ isOpen, onClose, onSelectQualification, mode
 
         if (profilePicFile) await handleProfilePicUpload(userId);
 
-        const { error: enrollmentError } = await supabase.from("enrollments").insert([{
-          user_id: userId,
-          programme_id: selectedProgramme.id,
-          institution_id: selectedProgramme.institution_id,
-          credits_total: selectedProgramme.credits_total || 0,
-          progress: 0,
-          payment_status: "failed",
-        }]);
-        if (enrollmentError) return alert(enrollmentError.message);
-
-        alert(`Sign up successful! You have enrolled in "${selectedProgramme.name}". Please sign in to complete your payment.`);
-        setMode("signin");
+        const { data: { session } } = await supabase.auth.getSession();
+        onClose();
+        if (session) {
+          router.push("/qualifications");
+        } else {
+          alert("Account created. Check your email to confirm, then sign in to browse and enroll.");
+          setMode("signin");
+        }
         setEmail("");
         setPassword("");
         setProfilePicFile(null);
@@ -230,13 +238,13 @@ export default function AuthModal({ isOpen, onClose, onSelectQualification, mode
                 style={{ borderColor: "var(--border-soft)", color: "var(--text)" }}
               />
               <select
-                value={qualification} onChange={(e) => setQualification(e.target.value)} required
+                value={institutionId} onChange={(e) => setInstitutionId(e.target.value)} required
                 className={inputClass}
                 style={{ borderColor: "var(--border-soft)", color: "var(--text)" }}
               >
-                <option value="">Select Programme</option>
-                {qualifications.map((q) => (
-                  <option key={q.id} value={q.id}>{q.name} (NQF {q.nqf_level})</option>
+                <option value="">Select your Institution</option>
+                {institutions.map((inst) => (
+                  <option key={inst.id} value={inst.id}>{inst.name}</option>
                 ))}
               </select>
               <div>

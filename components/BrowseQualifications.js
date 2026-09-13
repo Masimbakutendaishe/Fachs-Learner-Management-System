@@ -7,7 +7,7 @@ import Portal from "./Portal";
 import { createClient } from "../lib/supabase/client";
 import { useAuth } from "../pages/context/AuthContext";
 
-function normalizeProgramme(q) {
+function normalizeProgramme(q, facilitatorName) {
   return {
     id: q.id,
     institution_id: q.institution_id,
@@ -17,7 +17,7 @@ function normalizeProgramme(q) {
     description: q.description || "",
     credits: q.credits_total || 0,
     duration: q.duration || "TBA",
-    facilitator: q.facilitator || "TBA",
+    facilitator: facilitatorName || "TBA",
     applicationDeadline: q.application_deadline || "TBA",
   };
 }
@@ -31,21 +31,47 @@ export default function BrowseQualifications() {
 
   const supabase = createClient();
   const router = useRouter();
-  const { user: sessionUser, loading: sessionLoading } = useAuth();
+  const { user: sessionUser, loading: sessionLoading, institution } = useAuth();
 
   useEffect(() => {
+    if (sessionLoading) return;
+
     const fetchProgrammes = async () => {
+      if (!institution?.id) {
+        setProgrammes([]);
+        setLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase
         .from("programmes")
         .select("*")
+        .eq("institution_id", institution.id)
         .order("name");
 
-      if (error) console.error("Error fetching programmes:", error);
-      else setProgrammes((data || []).map(normalizeProgramme));
+      if (error) {
+        console.error("Error fetching programmes:", error);
+        setLoading(false);
+        return;
+      }
+
+      const facilitatorIds = [...new Set((data || []).map((p) => p.facilitator_id).filter(Boolean))];
+      let facilitatorMap = {};
+      if (facilitatorIds.length > 0) {
+        const { data: facilitators } = await supabase
+          .from("profiles")
+          .select("id, first_name, surname")
+          .in("id", facilitatorIds);
+        (facilitators || []).forEach((f) => {
+          facilitatorMap[f.id] = `${f.first_name || ""} ${f.surname || ""}`.trim();
+        });
+      }
+
+      setProgrammes((data || []).map((p) => normalizeProgramme(p, facilitatorMap[p.facilitator_id])));
       setLoading(false);
     };
     fetchProgrammes();
-  }, []);
+  }, [institution?.id, sessionLoading]);
 
   useEffect(() => {
     if (router.query.selected) {
@@ -121,16 +147,20 @@ export default function BrowseQualifications() {
     <div className="animate-fade-up">
       <p className="text-xs font-mono text-[var(--text-muted)] mb-1">CATALOGUE</p>
       <h1 className="font-display text-3xl font-semibold mb-2" style={{ color: "var(--text)" }}>
-        Browse Qualifications
+        {institution?.name ? `${institution.name}'s Qualifications` : "Browse Qualifications"}
       </h1>
       <p className="text-[var(--text-muted)] mb-8">
-        Accredited programmes across our institutions. Select one for full details.
+        {institution?.name ? "Qualifications offered by facilitators at your institution. Select one for full details." : "Sign up to see your institution's qualifications."}
       </p>
 
-      {loading ? (
+      {loading || sessionLoading ? (
         <p className="text-sm text-[var(--text-muted)] font-mono">Loading catalogue...</p>
+      ) : !sessionUser ? (
+        <div className="paper p-8 text-center text-gray-500">
+          Sign up or sign in to see qualifications offered at your institution.
+        </div>
       ) : programmes.length === 0 ? (
-        <div className="paper p-8 text-center text-gray-500">No qualifications available yet.</div>
+        <div className="paper p-8 text-center text-gray-500">No qualifications available at your institution yet.</div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {programmes.map((q, i) => (
