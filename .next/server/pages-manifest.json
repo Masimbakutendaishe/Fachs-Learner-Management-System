@@ -3,8 +3,7 @@
   "/_error": "pages/_error.js",
   "/_document": "pages/_document.js",
   "/": "pages/index.js",
-  "/admin/users": "pages/admin/users.js",
   "/admin/institution-settings": "pages/admin/institution-settings.js",
-  "/assessor/dashboard": "pages/assessor/dashboard.js",
-  "/qualifications": "pages/qualifications.js"
+  "/admin/billing": "pages/admin/billing.js",
+  "/facilitator/dashboard": "pages/facilitator/dashboard.js"
 }

@@ -13,6 +13,11 @@
   "rootMainFiles": [],
   "rootMainFilesTree": {},
   "pages": {
+    "/": [
+      "static/chunks/webpack.js",
+      "static/chunks/main.js",
+      "static/chunks/pages/index.js"
+    ],
     "/_app": [
       "static/chunks/webpack.js",
       "static/chunks/main.js",
@@ -23,15 +28,25 @@
       "static/chunks/main.js",
       "static/chunks/pages/_error.js"
     ],
-    "/assessor/dashboard": [
+    "/admin/billing": [
       "static/chunks/webpack.js",
       "static/chunks/main.js",
-      "static/chunks/pages/assessor/dashboard.js"
+      "static/chunks/pages/admin/billing.js"
     ],
-    "/qualifications": [
+    "/admin/fees": [
       "static/chunks/webpack.js",
       "static/chunks/main.js",
-      "static/chunks/pages/qualifications.js"
+      "static/chunks/pages/admin/fees.js"
+    ],
+    "/admin/institution-settings": [
+      "static/chunks/webpack.js",
+      "static/chunks/main.js",
+      "static/chunks/pages/admin/institution-settings.js"
+    ],
+    "/facilitator/dashboard": [
+      "static/chunks/webpack.js",
+      "static/chunks/main.js",
+      "static/chunks/pages/facilitator/dashboard.js"
     ]
   },
   "ampFirstPages": []

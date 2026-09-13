@@ -57,8 +57,8 @@ export default function AssessorDashboard() {
                 <p className="text-xs text-gray-400 font-mono mb-3">
                   {pendingCounts[p.id] > 0 ? `${pendingCounts[p.id]} awaiting review` : "All caught up"}
                 </p>
-                <Link href={`/assessor/${p.id}`} className="text-sm font-medium" style={{ color: "var(--brand-color)" }}>
-                  Open ->
+                  <Link href={`/assessor/${p.id}`} className="text-sm font-medium" style={{ color: "var(--brand-color)" }}>
+                  {"Open ->"}
                 </Link>
               </div>
             </li>
